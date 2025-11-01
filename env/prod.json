@@ -1,0 +1,6 @@
+{
+  "SUPABASE_URL": "https://qwklnntojcuxypowjehe.supabase.co",
+  "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF3a2xubnRvamN1eHlwb3dqZWhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwMjIyMDksImV4cCI6MjA3NzU5ODIwOX0.MqOMqMTWT1f-2Ap3HuDKH1Hv0lbaAlIJhiGdDmCJgZE",
+  "APP_ENV": "prod",
+  "DEFAULT_CURRENCY": "USD"
+}
