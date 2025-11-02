@@ -1,0 +1,12 @@
+[
+  {"code":"USD","name":"US Dollar"},
+  {"code":"EUR","name":"Euro"},
+  {"code":"MAD","name":"Moroccan Dirham"},
+  {"code":"GBP","name":"Pound Sterling"},
+  {"code":"CAD","name":"Canadian Dollar"},
+  {"code":"AUD","name":"Australian Dollar"},
+  {"code":"JPY","name":"Japanese Yen"},
+  {"code":"CNY","name":"Chinese Yuan"},
+  {"code":"CHF","name":"Swiss Franc"}
+]
+

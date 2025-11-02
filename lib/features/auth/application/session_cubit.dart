@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'session_state.dart';
+import '../../profile/data/profile_repository_impl.dart';
 
 class SessionCubit extends Cubit<SessionState> {
   final SupabaseClient _supabase;
@@ -43,17 +44,10 @@ class SessionCubit extends Cubit<SessionState> {
 
   Future<void> _ensureProfileDefaults() async {
     try {
-      final user = _supabase.auth.currentUser;
-      if (user == null) return;
-      final fullName = (user.userMetadata?['full_name'] as String?)?.trim();
-      await _supabase.from('profiles').upsert({
-        'id': user.id,
-        'display_name': (fullName != null && fullName.isNotEmpty) ? fullName : 'New user',
-        'base_currency': 'USD',
-        'theme': 'system',
-      }, onConflict: 'id');
+      final repo = ProfileRepositoryImpl(_supabase);
+      await repo.ensureMyProfileDefaults();
     } catch (_) {
-      // During early dev, table/policies may not exist yet; ignore.
+      // Ignore during early dev (table or RLS might be evolving).
     }
   }
 
