@@ -2,14 +2,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class SignInPage extends StatefulWidget {
-  const SignInPage({super.key});
-
+class MagicLinkPage extends StatefulWidget {
+  const MagicLinkPage({super.key});
   @override
-  State<SignInPage> createState() => _SignInPageState();
+  State<MagicLinkPage> createState() => _MagicLinkPageState();
 }
 
-class _SignInPageState extends State<SignInPage> {
+class _MagicLinkPageState extends State<MagicLinkPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   bool _sending = false;
@@ -35,7 +34,6 @@ class _SignInPageState extends State<SignInPage> {
       final supabase = Supabase.instance.client;
       await supabase.auth.signInWithOtp(
         email: _emailCtrl.text.trim(),
-        // On web, pass null; on mobile, use custom scheme you configure below.
         emailRedirectTo: kIsWeb ? null : 'finmate://login-callback/',
       );
       if (mounted) {
@@ -43,11 +41,15 @@ class _SignInPageState extends State<SignInPage> {
           const SnackBar(content: Text('Vérifiez votre boîte mail.')),
         );
       }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Erreur: $e')));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -57,7 +59,7 @@ class _SignInPageState extends State<SignInPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign in')),
+      appBar: AppBar(title: const Text('Lien magique')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -97,3 +99,4 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 }
+

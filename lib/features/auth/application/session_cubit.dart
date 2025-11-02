@@ -43,16 +43,17 @@ class SessionCubit extends Cubit<SessionState> {
 
   Future<void> _ensureProfileDefaults() async {
     try {
-      final uid = _supabase.auth.currentUser?.id;
-      if (uid == null) return;
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+      final fullName = (user.userMetadata?['full_name'] as String?)?.trim();
       await _supabase.from('profiles').upsert({
-        'id': uid,
-        'display_name': 'New user',
+        'id': user.id,
+        'display_name': (fullName != null && fullName.isNotEmpty) ? fullName : 'New user',
         'base_currency': 'USD',
         'theme': 'system',
       }, onConflict: 'id');
     } catch (_) {
-      // Table may not exist yet during early dev; ignore.
+      // During early dev, table/policies may not exist yet; ignore.
     }
   }
 

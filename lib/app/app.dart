@@ -3,7 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../features/home/presentation/pages/home_page.dart';
-import '../features/auth/presentation/pages/sign_in_page.dart';
+import '../features/auth/presentation/pages/auth_email_page.dart';
+import '../features/auth/presentation/pages/magic_link_page.dart';
 import '../features/auth/presentation/pages/settings_page.dart';
 import '../features/auth/application/session_cubit.dart';
 import '../features/auth/application/session_state.dart';
@@ -21,7 +22,10 @@ class FinMateApp extends StatelessWidget {
         initialRoute: '/',
         routes: <String, WidgetBuilder>{
           '/': (_) => const HomePage(),
-          '/auth/sign-in': (_) => const SignInPage(),
+          // New: tabbed login/signup page
+          '/auth/sign-in': (_) => const AuthEmailPage(),
+          // Preserve magic-link flow on a separate route
+          '/auth/magic-link': (_) => const MagicLinkPage(),
           '/settings': (_) => const SettingsPage(),
         },
         builder: (context, child) {
