@@ -41,6 +41,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # Pure-Dart test framework for RLS tests
+  test: ^1.25.0
+  # Supabase (pure Dart) used only inside tests
+  supabase: ^2.0.6
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

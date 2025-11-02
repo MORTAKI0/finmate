@@ -23,6 +23,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _formKey = GlobalKey<FormState>();
   final _displayNameCtrl = TextEditingController();
+
   String _currency = 'USD';
   String _theme = 'system';
 
@@ -33,7 +34,6 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   String? _validateCurrency(String? v) {
-    // Picker ensures valid values, but keep guard for safety
     final s = (v ?? '').trim();
     if (s.isEmpty) return 'Devise requise';
     final ok = RegExp(r'^[A-Z]{3}$').hasMatch(s);
@@ -43,7 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _applyTheme(String t) {
     setState(() => _theme = t);
-    AppThemeController.instance.setFromString(t);
+    AppThemeController.instance.setFromString(t); // live switch
   }
 
   void _loadIntoForm(Profile p) {
@@ -67,27 +67,54 @@ class _SettingsPageState extends State<SettingsPage> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
               child: BlocConsumer<ProfileCubit, ProfileState>(
+                listenWhen: (prev, next) => prev.status != next.status,
                 listener: (context, state) {
                   if (state.status == ProfileStatus.loaded && state.profile != null) {
                     _loadIntoForm(state.profile!);
+                    // Show success if coming back from a save
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Profil mis à jour')),
+                      );
+                    }
                   }
-                  if (state.status == ProfileStatus.error && state.error != null) {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text(state.error!)));
+                  if (state.status == ProfileStatus.error) {
+                    switch (state.errorKind) {
+                      case ProfileErrorKind.unauthorized:
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Session expirée')),
+                        );
+                        context.read<SessionCubit>().markExpiredAndSignOut();
+                        break;
+                      case ProfileErrorKind.forbidden:
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Accès refusé')),
+                        );
+                        break;
+                      default:
+                        if (state.error != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(state.error!)),
+                          );
+                        }
+                    }
                   }
                 },
                 builder: (context, state) {
                   final isSaving = state.status == ProfileStatus.saving;
                   final isLoading = state.status == ProfileStatus.loading || state.status == ProfileStatus.initial;
 
+                  if (isLoading) {
+                    return const Padding(
+                      padding: EdgeInsets.all(24.0),
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isLoading) const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: CircularProgressIndicator(),
-                      ),
-                      if (!isLoading) Form(
+                      Form(
                         key: _formKey,
                         child: Column(
                           children: [
@@ -100,27 +127,42 @@ class _SettingsPageState extends State<SettingsPage> {
                               enabled: !isSaving,
                             ),
                             const SizedBox(height: 12),
+
+                            // Currency Picker (searchable; “EU…” -> “EUR — Euro”)
                             CurrencyPickerField(
                               initialValue: _currency,
                               validator: _validateCurrency,
                               onChanged: (code) => _currency = code,
-                              // enabled respects isSaving implicitly because it's not wired here
+                              labelText: 'Devise (ISO-4217)',
                             ),
                             const SizedBox(height: 12),
-                            DropdownButtonFormField<String>(
-                              initialValue: _theme,
-                              items: const [
-                                DropdownMenuItem(value: 'system', child: Text('System')),
-                                DropdownMenuItem(value: 'light', child: Text('Light')),
-                                DropdownMenuItem(value: 'dark', child: Text('Dark')),
+
+                            // Theme segmented toggle (system / light / dark)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text('Thème', style: Theme.of(context).textTheme.bodySmall),
+                            ),
+                            const SizedBox(height: 6),
+                            SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(value: 'system', label: Text('System'), icon: Icon(Icons.auto_mode)),
+                                ButtonSegment(value: 'light', label: Text('Light'), icon: Icon(Icons.light_mode)),
+                                ButtonSegment(value: 'dark', label: Text('Dark'), icon: Icon(Icons.dark_mode)),
                               ],
-                              onChanged: isSaving ? null : (v) => _applyTheme(v ?? 'system'),
-                              decoration: const InputDecoration(labelText: 'Thème'),
+                              selected: <String>{_theme},
+                              onSelectionChanged: isSaving ? null : (sel) {
+                                if (sel.isNotEmpty) _applyTheme(sel.first);
+                              },
                             ),
                             const SizedBox(height: 20),
+
                             SizedBox(
                               width: double.infinity,
-                              child: ElevatedButton(
+                              child: ElevatedButton.icon(
+                                icon: isSaving
+                                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : const Icon(Icons.save),
+                                label: Text(isSaving ? 'Enregistrement…' : 'Enregistrer'),
                                 onPressed: isSaving
                                     ? null
                                     : () {
@@ -133,26 +175,24 @@ class _SettingsPageState extends State<SettingsPage> {
                                           theme: _theme,
                                         );
                                       },
-                                child: isSaving
-                                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                    : const Text('Enregistrer'),
                               ),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(height: 24),
-                      // Sign out stays available
+                      // Logout section
                       BlocBuilder<SessionCubit, SessionState>(
                         builder: (context, s) {
                           final busy = s.isLoading;
                           return SizedBox(
                             width: 240,
-                            child: ElevatedButton(
+                            child: OutlinedButton.icon(
+                              icon: busy
+                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : const Icon(Icons.logout),
+                              label: const Text('Déconnexion'),
                               onPressed: busy ? null : () => context.read<SessionCubit>().signOut(),
-                              child: busy
-                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : const Text('Déconnexion'),
                             ),
                           );
                         },

@@ -16,7 +16,11 @@ class FinMateApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => SessionCubit(Supabase.instance.client),
+      create: (_) {
+        final c = SessionCubit(Supabase.instance.client);
+        c.bootstrap(); // <- AUTH-04
+        return c;
+      },
       child: AnimatedBuilder(
         animation: AppThemeController.instance,
         builder: (context, _) {

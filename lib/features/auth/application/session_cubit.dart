@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'session_state.dart';
 import '../../profile/data/profile_repository_impl.dart';
+import 'session_state.dart';
 
 class SessionCubit extends Cubit<SessionState> {
   final SupabaseClient _supabase;
@@ -19,6 +19,8 @@ class SessionCubit extends Cubit<SessionState> {
           if (session != null) {
             emit(SessionState.authenticated(session));
             await _ensureProfileDefaults();
+          } else {
+            emit(SessionState.unauthenticated());
           }
           break;
         case AuthChangeEvent.signedOut:
@@ -31,15 +33,38 @@ class SessionCubit extends Cubit<SessionState> {
     });
   }
 
+  /// AUTH-04: called once at app start to restore/refresh a persisted session.
+  Future<void> bootstrap() async {
+    // If there is an in-memory session, try to refresh it to ensure validity.
+    final current = _supabase.auth.currentSession;
+    if (current != null) {
+      try {
+        await _supabase.auth.refreshSession();
+        // onAuthStateChange will emit authenticated
+      } on AuthException {
+        // Refresh failed => expire softly and sign out
+        await _supabase.auth.signOut();
+        emit(SessionState.unauthenticated(expiredNotice: true));
+      } catch (_) {
+        // Any other error -> fall back to unauthenticated
+        emit(SessionState.unauthenticated());
+      }
+    } else {
+      // Let onAuthStateChange(initialSession) resolve to unauthenticated
+      // No-op here.
+    }
+  }
+
+  /// AUTH-05: used by UI when an API call returns 401 to force a soft logout.
+  Future<void> markExpiredAndSignOut() async {
+    try { await _supabase.auth.signOut(); } catch (_) {}
+    emit(SessionState.unauthenticated(expiredNotice: true));
+  }
+
   Future<void> signOut() async {
     emit(state.copyWith(isLoading: true, error: null));
-    try {
-      await _supabase.auth.signOut();
-    } catch (_) {
-      // Offline or network error — local session still cleared.
-    } finally {
-      emit(state.copyWith(isLoading: false));
-    }
+    try { await _supabase.auth.signOut(); } catch (_) {}
+    emit(state.copyWith(isLoading: false));
   }
 
   Future<void> _ensureProfileDefaults() async {
@@ -49,6 +74,15 @@ class SessionCubit extends Cubit<SessionState> {
     } catch (_) {
       // Ignore during early dev (table or RLS might be evolving).
     }
+  }
+
+  /// one-shot read & clear of the expired notice
+  bool takeExpiredNotice() {
+    if (state.expiredNotice) {
+      emit(state.copyWith(expiredNotice: false));
+      return true;
+    }
+    return false;
   }
 
   @override

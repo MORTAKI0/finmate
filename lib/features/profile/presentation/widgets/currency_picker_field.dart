@@ -4,18 +4,14 @@ import 'package:flutter/services.dart' show rootBundle;
 
 class CurrencyPickerField extends FormField<String> {
   CurrencyPickerField({
-    Key? key,
-    String? initialValue,
-    FormFieldSetter<String>? onSaved,
-    FormFieldValidator<String>? validator,
+    super.key,
+    super.initialValue,
+    super.onSaved,
+    super.validator,
     ValueChanged<String>? onChanged,
     bool enabled = true,
     String labelText = 'Devise (ISO-4217)',
   }) : super(
-          key: key,
-          initialValue: initialValue,
-          onSaved: onSaved,
-          validator: validator,
           builder: (state) {
             return _CurrencyPickerInner(
               labelText: labelText,
@@ -142,6 +138,7 @@ class _CurrencyPickerInnerState extends State<_CurrencyPickerInner> {
             labelText: widget.labelText,
             errorText: widget.errorText,
             enabled: widget.enabled,
+            helperText: 'Tapez pour chercher (ex: “EU” → EUR — Euro)',
             border: const UnderlineInputBorder(),
           ),
           child: InkWell(
@@ -162,4 +159,3 @@ class _CurrencyPickerInnerState extends State<_CurrencyPickerInner> {
     );
   }
 }
-

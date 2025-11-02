@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../application/session_cubit.dart';
 
 class AuthEmailPage extends StatefulWidget {
   const AuthEmailPage({super.key});
@@ -23,6 +25,20 @@ class _AuthEmailPageState extends State<AuthEmailPage>
   final _signPass2Ctrl = TextEditingController();
   final _signKey = GlobalKey<FormState>();
   bool _signBusy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Show one-shot toast if we arrived due to an expired session.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final cubit = context.read<SessionCubit>();
+      if (cubit.takeExpiredNotice()) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session expirée')),
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -289,4 +305,3 @@ class _AuthEmailPageState extends State<AuthEmailPage>
     );
   }
 }
-
