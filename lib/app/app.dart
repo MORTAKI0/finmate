@@ -6,6 +6,8 @@ import '../features/home/presentation/pages/home_page.dart';
 import '../features/auth/presentation/pages/auth_email_page.dart';
 import '../features/auth/presentation/pages/magic_link_page.dart';
 import '../features/auth/presentation/pages/settings_page.dart';
+import '../features/holdings/presentation/pages/holdings_list_page.dart';
+import '../features/holdings/presentation/pages/holding_edit_page.dart';
 import '../features/auth/application/session_cubit.dart';
 import '../features/auth/application/session_state.dart';
 import 'theme_controller.dart';
@@ -36,6 +38,8 @@ class FinMateApp extends StatelessWidget {
               // Preserve magic-link flow on a separate route
               '/auth/magic-link': (_) => const MagicLinkPage(),
               '/settings': (_) => const SettingsPage(),
+              '/holdings': (_) => const HoldingsListPage(),
+              '/holdings/edit': (_) => const HoldingEditPage(),
             },
             builder: (context, child) {
               return BlocListener<SessionCubit, SessionState>(

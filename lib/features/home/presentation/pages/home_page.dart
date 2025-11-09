@@ -55,7 +55,7 @@ class HomePage extends StatelessWidget {
                   SliverAppBar(
                     floating: true,
                     snap: true,
-                    backgroundColor: kDarkBG.withOpacity(0.95),
+                    backgroundColor: kDarkBG.withValues(alpha: 0.95),
                     elevation: 0,
                     titleSpacing: 0,
                     toolbarHeight: 80,
@@ -87,7 +87,7 @@ class HomePage extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: kCoralRed.withOpacity(0.3),
+                                    color: kCoralRed.withValues(alpha: 0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
                                   ),
@@ -114,7 +114,7 @@ class HomePage extends StatelessWidget {
                                 Text(
                                   'Hey, $username! 👋',
                                   style: TextStyle(
-                                    color: kBeige.withOpacity(0.8),
+                                    color: kBeige.withValues(alpha: 0.8),
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -138,7 +138,7 @@ class HomePage extends StatelessWidget {
                                   color: const Color(0xFF2A2A2D),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
-                                    color: kBeige.withOpacity(0.1),
+                                    color: kBeige.withValues(alpha: 0.1),
                                     width: 1,
                                   ),
                                 ),
@@ -166,10 +166,16 @@ class HomePage extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                         child: Row(
-                          children: const [
-                            Expanded(child: QuickStatCard(label: 'Holdings', value: '---', icon: Icons.trending_up)),
-                            SizedBox(width: 12),
-                            Expanded(child: QuickStatCard(label: 'Budget', value: '---', icon: Icons.pie_chart_rounded)),
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => Navigator.of(context).pushNamed('/holdings'),
+                                borderRadius: BorderRadius.circular(16),
+                                child: const QuickStatCard(label: 'Holdings', value: '---', icon: Icons.trending_up),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(child: QuickStatCard(label: 'Budget', value: '---', icon: Icons.pie_chart_rounded)),
                           ],
                         ),
                       ),
@@ -334,10 +340,10 @@ class _AnimatedHeroCardState extends State<AnimatedHeroCard> with SingleTickerPr
               end: Alignment.bottomRight,
               colors: [Color(0xFF2D2D30), Color(0xFF1A1A1C)],
             ),
-            border: Border.all(color: kBeige.withOpacity(0.1), width: 1.5),
+        border: Border.all(color: kBeige.withValues(alpha: 0.1), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
               ),
@@ -377,9 +383,9 @@ class _AnimatedHeroCardState extends State<AnimatedHeroCard> with SingleTickerPr
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: kCoralRed.withOpacity(0.15),
+                            color: kCoralRed.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: kCoralRed.withOpacity(0.3), width: 1),
+                            border: Border.all(color: kCoralRed.withValues(alpha: 0.3), width: 1),
                           ),
                           child: const Row(
                             mainAxisSize: MainAxisSize.min,
@@ -415,7 +421,7 @@ class _AnimatedHeroCardState extends State<AnimatedHeroCard> with SingleTickerPr
                     Text(
                       'Track holdings, budgets, and spending in one clean, powerful app.',
                       style: TextStyle(
-                        color: kBeige.withOpacity(0.9),
+                        color: kBeige.withValues(alpha: 0.9),
                         fontSize: 15,
                         height: 1.5,
                         fontWeight: FontWeight.w400,
@@ -455,7 +461,7 @@ class EnhancedPillTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF2A2A2D),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: kBeige.withOpacity(0.15), width: 1),
+        border: Border.all(color: kBeige.withValues(alpha: 0.15), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -489,7 +495,7 @@ class QuickStatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF232326),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kBeige.withOpacity(0.08), width: 1),
+        border: Border.all(color: kBeige.withValues(alpha: 0.08), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -508,7 +514,7 @@ class QuickStatCard extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: kBeige.withOpacity(0.7),
+              color: kBeige.withValues(alpha: 0.7),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -588,7 +594,7 @@ class _AnimatedFeatureCardState extends State<AnimatedFeatureCard> with SingleTi
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.gradient.colors.first.withOpacity(0.3),
+                    color: widget.gradient.colors.first.withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -600,7 +606,7 @@ class _AnimatedFeatureCardState extends State<AnimatedFeatureCard> with SingleTi
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     alignment: Alignment.center,
@@ -623,7 +629,7 @@ class _AnimatedFeatureCardState extends State<AnimatedFeatureCard> with SingleTi
                         Text(
                           widget.description,
                           style: TextStyle(
-                            color: kWhite.withOpacity(0.9),
+                            color: kWhite.withValues(alpha: 0.9),
                             fontSize: 13,
                             height: 1.4,
                           ),
@@ -631,7 +637,7 @@ class _AnimatedFeatureCardState extends State<AnimatedFeatureCard> with SingleTi
                       ],
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios_rounded, color: kWhite.withOpacity(0.7), size: 18),
+                  Icon(Icons.arrow_forward_ios_rounded, color: kWhite.withValues(alpha: 0.7), size: 18),
                 ],
               ),
             ),
@@ -654,7 +660,7 @@ class ImprovedStepTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF232326),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kBeige.withOpacity(0.08), width: 1),
+        border: Border.all(color: kBeige.withValues(alpha: 0.08), width: 1),
       ),
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -669,7 +675,7 @@ class ImprovedStepTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: kCoralRed.withOpacity(0.3),
+                  color: kCoralRed.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -696,7 +702,7 @@ class ImprovedStepTile extends StatelessWidget {
               ),
             ),
           ),
-          Icon(icon, color: kBeige.withOpacity(0.5), size: 20),
+          Icon(icon, color: kBeige.withValues(alpha: 0.5), size: 20),
         ],
       ),
     );
@@ -712,7 +718,7 @@ class SecurityBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF202022),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: kCoralRed.withOpacity(0.2), width: 1.5),
+        border: Border.all(color: kCoralRed.withValues(alpha: 0.2), width: 1.5),
       ),
       child: Padding(
         padding: const EdgeInsets.all(18.0),
@@ -721,7 +727,7 @@ class SecurityBadge extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: kCoralRed.withOpacity(0.15),
+                color: kCoralRed.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.shield_rounded, color: kCoralRed, size: 24),
@@ -743,7 +749,7 @@ class SecurityBadge extends StatelessWidget {
                   Text(
                     'Your data stays yours. Protected with secure auth & row-level rules.',
                     style: TextStyle(
-                      color: kBeige.withOpacity(0.8),
+                      color: kBeige.withValues(alpha: 0.8),
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -794,7 +800,7 @@ class _AnimatedCTAButtonState extends State<AnimatedCTAButton> {
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
-                color: kCoralRed.withOpacity(0.4),
+                color: kCoralRed.withValues(alpha: 0.4),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
