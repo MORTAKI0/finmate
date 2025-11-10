@@ -9,8 +9,8 @@ variables:
   ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
-  ANDROID_PLATFORM: "android-34"
-  ANDROID_BUILD_TOOLS: "34.0.0"
+  ANDROID_PLATFORM: "android-34"          # baseline; will be overridden if Gradle declares another
+  ANDROID_BUILD_TOOLS: "34.0.0"           # baseline; will be overridden if Gradle declares another
 
 cache:
   key: "flutter-android-$CI_COMMIT_REF_SLUG"
@@ -29,12 +29,14 @@ android_debug_apk:
     - set -euxo pipefail
     - mkdir -p ci-debug
 
-    # Basics & JDK
+    # Basics & JDK (start with JDK 17; we'll fall back to 11 if needed)
     - apt-get update -y
     - apt-get install -y --no-install-recommends curl unzip git xz-utils zip ca-certificates openjdk-17-jdk libglu1-mesa
+    - export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+    - export PATH="$JAVA_HOME/bin:$PATH"
     - java -version | tee ci-debug/java-version.txt
 
-    # Android SDK (cmdline-tools to .../latest)
+    # Android SDK (cmdline-tools to .../latest so sdkmanager path is standard)
     - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
     - curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
     - unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
@@ -43,9 +45,27 @@ android_debug_apk:
     - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
     - which sdkmanager | tee ci-debug/which-sdkmanager.txt
     - sdkmanager --version | tee ci-debug/sdkmanager-version.txt
+
+    # Accept licenses & install a baseline platform + build tools
     - yes | sdkmanager --licenses
     - sdkmanager "platform-tools" "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
-    - sdkmanager --list | tee ci-debug/sdkmanager-list.txt
+
+    # Detect compileSdkVersion/buildToolsVersion from your Gradle files and install them
+    - |
+      set -e
+      DETECTED_SDK="$(grep -R --line-number -E 'compileSdk(Version)?[[:space:]]+([0-9]+)' android/app/build.gradle android/build.gradle || true)"
+      if [ -n "$DETECTED_SDK" ]; then
+        COMPILE_SDK="$(echo "$DETECTED_SDK" | sed -E 's/.*compileSdk(Version)?[[:space:]]+([0-9]+)/\2/' | tail -n1)"
+        echo "Detected compileSdkVersion=$COMPILE_SDK" | tee -a ci-debug/detected.txt
+        sdkmanager "platforms;android-$COMPILE_SDK" || true
+      fi
+      DETECTED_BT="$(grep -R --line-number -E 'buildToolsVersion[[:space:]]+"[^"]+"' android/app/build.gradle android/build.gradle || true)"
+      if [ -n "$DETECTED_BT" ]; then
+        BUILD_TOOLS="$(echo "$DETECTED_BT" | sed -E 's/.*buildToolsVersion[[:space:]]+"([^"]+)".*/\1/' | tail -n1)"
+        echo "Detected buildToolsVersion=$BUILD_TOOLS" | tee -a ci-debug/detected.txt
+        sdkmanager "build-tools;$BUILD_TOOLS" || true
+      fi
+      sdkmanager --list | tee ci-debug/sdkmanager-list.txt
 
     # Flutter (stable)
     - git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$CI_PROJECT_DIR/flutter"
@@ -55,7 +75,7 @@ android_debug_apk:
     - flutter precache --android
     - flutter doctor -v | tee ci-debug/flutter-doctor-pre.txt
 
-    # Make sure Gradle sees the SDK
+    # Ensure Gradle sees the SDK
     - mkdir -p android
     - printf "sdk.dir=%s\n" "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > android/local.properties
     - cat android/local.properties | tee ci-debug/local-properties.txt
@@ -75,30 +95,32 @@ android_debug_apk:
 
   script:
     - set -euxo pipefail
-    # Optional gates:
-    # - flutter analyze
-    # - flutter test --no-pub
-
-    # Pass dart-defines from CI vars if present
+    # Pass dart-defines from CI vars (optional)
     - |
       EXTRA_DEFINES=()
       if [ -n "${SUPABASE_URL:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_URL=$SUPABASE_URL"); fi
       if [ -n "${SUPABASE_ANON_KEY:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"); fi
 
-      # Build (verbose). On failure, collect diagnostics then exit 1.
-      flutter build apk -v --debug --no-shrink "${EXTRA_DEFINES[@]}" \
-        || { echo "=== BUILD FAILED: collecting diagnostics ===";
-             env | sort > ci-debug/env.txt || true;
-             flutter doctor -v > ci-debug/flutter-doctor-post.txt 2>&1 || true;
-             (cd android && ./gradlew -v) > ci-debug/gradle-version-post.txt 2>&1 || true;
-             ls -R build > ci-debug/build-tree.txt 2>&1 || true;
-             find . -maxdepth 4 -name "*.log" -print -exec sh -c "echo ==== {} ====; head -n 200 \"{}\"" \; \
-               > ci-debug/log-snippets.txt 2>&1 || true;
-             exit 1; }
+      # First attempt with JDK 17 (AGP 8+)
+      if ! flutter build apk -v --debug --no-shrink "${EXTRA_DEFINES[@]}"; then
+        echo "=== First build failed. Retrying with JDK 11 (for AGP < 8) ===" | tee -a ci-debug/fallback.txt
+        apt-get update -y && apt-get install -y --no-install-recommends openjdk-11-jdk
+        export JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
+        export PATH="$JAVA_HOME/bin:$PATH"
+        java -version | tee ci-debug/java-version-retry.txt
+        flutter build apk -v --debug --no-shrink "${EXTRA_DEFINES[@]}"
+      fi
 
-      # On success, also snapshot outputs
+      # Snapshot outputs on success
       ls -R build > ci-debug/build-tree.txt 2>&1 || true
       flutter doctor -v > ci-debug/flutter-doctor-post.txt 2>&1 || true
+
+  after_script:
+    # If anything failed earlier, collect extra context before exiting
+    - set +e
+    - env | sort > ci-debug/env.txt
+    - ls -R "$ANDROID_SDK_ROOT" > ci-debug/android-sdk-tree.txt 2>&1 || true
+    - find . -maxdepth 4 -name "*.log" -print -exec sh -c 'echo ==== {} ====; head -n 200 "{}"' \; > ci-debug/log-snippets.txt 2>&1 || true
 
   artifacts:
     when: always
