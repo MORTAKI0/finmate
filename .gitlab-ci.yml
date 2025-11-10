@@ -1,0 +1,77 @@
+stages:
+  - build
+
+# Global vars
+variables:
+  ANDROID_SDK_ROOT: "$CI_PROJECT_DIR/android-sdk"
+  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+  PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
+  # Bump if your Android/AGP requires a different platform/tools
+  ANDROID_PLATFORM: "android-34"
+  ANDROID_BUILD_TOOLS: "34.0.0"
+
+# Use a plain Ubuntu image; we'll install everything
+image: ubuntu:22.04
+
+# Cache pub & gradle between pipelines for speed
+cache:
+  key: "flutter-android-$CI_COMMIT_REF_SLUG"
+  paths:
+    - .gradle/
+    - .pub-cache/
+    - build/               # optional, may speed up successive builds
+  policy: pull-push
+
+# Single job that builds the debug APK and exposes it as artifact
+android_debug_apk:
+  stage: build
+  tags: []   # Leave empty to use shared runners; or put your runner tag here
+  rules:
+    - if: $CI_COMMIT_BRANCH    # run on every branch push
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  before_script:
+    # Basics
+    - apt-get update -y
+    - apt-get install -y --no-install-recommends curl unzip git xz-utils zip ca-certificates openjdk-17-jdk libglu1-mesa
+    - java -version
+
+    # ANDROID SDK (commandline tools)
+    - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+    - curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdtools.zip
+    - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+    - unzip -q cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+    - rm -f cmdtools.zip
+    - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+
+    # Accept licenses & install required packages
+    - yes | sdkmanager --licenses
+    - sdkmanager "platform-tools" "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
+
+    # FLUTTER (stable)
+    - git clone https://github.com/flutter/flutter.git -b stable "$CI_PROJECT_DIR/flutter"
+    - export PATH="$CI_PROJECT_DIR/flutter/bin:$PATH"
+    - flutter --version
+    - flutter config --no-analytics
+    - flutter precache --android
+
+    # Project deps
+    - flutter pub get
+
+  script:
+    # Optional quality gates (uncomment if you want CI to fail on these)
+    # - flutter analyze
+    # - flutter test --no-pub
+
+    # Build debug APK
+    - flutter build apk --debug --no-shrink
+
+  artifacts:
+    when: always
+    expire_in: 7 days
+    paths:
+      # Newer Flutter/AGP output path:
+      - build/app/outputs/flutter-apk/app-debug.apk
+      # Fallback legacy outputs (in case):
+      - build/app/outputs/apk/debug/app-debug.apk
+

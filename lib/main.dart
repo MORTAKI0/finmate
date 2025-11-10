@@ -1,7 +1,10 @@
+// file: lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'app/app.dart';
+import 'features/auth/application/session_cubit.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,8 +17,15 @@ Future<void> main() async {
   await Supabase.initialize(
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
-    // Default auth flow works for magic links created from this app.
+    authOptions: const FlutterAuthClientOptions(
+      autoRefreshToken: true,
+    ),
   );
 
-  runApp(const FinMateApp());
+  runApp(
+    BlocProvider(
+      create: (_) => SessionCubit(Supabase.instance.client)..bootstrap(),
+      child: FinMateApp(),
+    ),
+  );
 }
