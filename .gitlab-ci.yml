@@ -1,7 +1,7 @@
 stages:
   - build
 
-# Vanilla Ubuntu; we install everything ourselves
+# Plain Ubuntu; we'll install Android SDK + Flutter
 image: ubuntu:22.04
 
 variables:
@@ -22,30 +22,29 @@ cache:
 
 android_debug_apk:
   stage: build
+  # ✅ Run only on the dev branch (and dev MRs)
   rules:
-    - if: $CI_COMMIT_BRANCH           # run on any branch push
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"'
   before_script:
     - set -euxo pipefail
 
-    # ---- Basics & JDK (Java 17 is OK for AGP 8+. If your project uses older AGP, switch to openjdk-11-jdk) ----
+    # ---- Basics & JDK (Java 17 for AGP 8+) ----
     - apt-get update -y
     - apt-get install -y --no-install-recommends curl unzip git xz-utils zip ca-certificates openjdk-17-jdk libglu1-mesa
     - java -version
 
-    # ---- Android SDK: install cmdline-tools properly (so sdkmanager exists at .../latest/bin) ----
+    # ---- Android SDK: install cmdline-tools properly ----
     - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
     - curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
     - unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
     - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
     - rm -f /tmp/cmdtools.zip
     - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
-
-    # Sanity checks
     - which sdkmanager
     - sdkmanager --version
 
-    # Accept licenses & install required packages (match your compileSdk/buildTools)
+    # Accept licenses & install the platform/build-tools you compile with
     - yes | sdkmanager --licenses
     - sdkmanager "platform-tools" "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
 
@@ -57,21 +56,18 @@ android_debug_apk:
     - flutter precache --android
     - flutter doctor -v
 
-    # ---- Gradle/AGP can ignore env vars; ensure local.properties points to our SDK ----
+    # ---- Make sure Gradle sees the SDK ----
     - mkdir -p android
     - printf "sdk.dir=%s\n" "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > android/local.properties
     - cat android/local.properties
 
-    # Helpful Gradle defaults (append; safe if file already exists)
+    # Helpful Gradle defaults (append if not present)
     - |
       echo "org.gradle.jvmargs=-Xmx4096m -Dkotlin.daemon.jvm.options=-Xmx2048m" >> android/gradle.properties
       echo "android.useAndroidX=true" >> android/gradle.properties
-      echo "android.enableJetifier=true" >> android/gradle.properties
-
-    # Gradle wrapper sometimes loses +x bit in CI
     - chmod +x android/gradlew || true
 
-    # ---- Dart/Flutter deps ----
+    # ---- Dependencies ----
     - flutter pub get
 
   script:
@@ -79,18 +75,21 @@ android_debug_apk:
     # - flutter analyze
     # - flutter test --no-pub
 
-    # Pass dart-defines from CI variables if present (e.g., set in Settings → CI/CD → Variables)
+    # Pass dart-defines from CI variables (set in Settings → CI/CD → Variables)
     - |
       set -euxo pipefail
       EXTRA_DEFINES=()
       if [ -n "${SUPABASE_URL:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_URL=$SUPABASE_URL"); fi
       if [ -n "${SUPABASE_ANON_KEY:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"); fi
 
-      # Build Debug APK
-      flutter build apk --debug --no-shrink "${EXTRA_DEFINES[@]}"
+      # Verbose build to capture errors clearly
+      flutter build apk -v --debug --no-shrink "${EXTRA_DEFINES[@]}" || { echo "=== Build failed, listing outputs & gradle logs ==="; ls -R build || true; find . -name "*.log" -maxdepth 4 -print -exec sed -n '1,200p' {} \; || true; exit 1; }
+
+      # Show where Flutter put the APKs
+      ls -R build/app/outputs || true
 
   artifacts:
-    when: always
+    when: on_success
     expire_in: 7 days
     paths:
       - build/app/outputs/flutter-apk/app-debug.apk
