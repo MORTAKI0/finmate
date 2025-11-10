@@ -1,3 +1,4 @@
+// file: lib/features/auth/presentation/pages/auth_email_page.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -182,11 +183,11 @@ class _AuthEmailPageState extends State<AuthEmailPage>
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: kMidGray.withOpacity(0.3)),
+        borderSide: BorderSide(color: kMidGray.withValues(alpha: 0.3)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: kMidGray.withOpacity(0.3)),
+        borderSide: BorderSide(color: kMidGray.withValues(alpha: 0.3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -224,7 +225,7 @@ class _AuthEmailPageState extends State<AuthEmailPage>
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: kCoralRed.withOpacity(0.4),
+                                  color: kCoralRed.withValues(alpha: 0.4),
                             blurRadius: 24,
                             offset: const Offset(0, 8),
                           ),
@@ -263,7 +264,7 @@ class _AuthEmailPageState extends State<AuthEmailPage>
                       decoration: BoxDecoration(
                         color: kBeige,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: kMidGray.withOpacity(0.2)),
+                        border: Border.all(color: kMidGray.withValues(alpha: 0.2)),
                       ),
                       child: TabBar(
                         controller: _tabController,
@@ -392,7 +393,7 @@ class _AuthEmailPageState extends State<AuthEmailPage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: kCoralRed,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: kCoralRed.withOpacity(0.6),
+                disabledBackgroundColor: kCoralRed.withValues(alpha: 0.6),
                 elevation: 0,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
@@ -547,7 +548,7 @@ class _AuthEmailPageState extends State<AuthEmailPage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: kCoralRed,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: kCoralRed.withOpacity(0.6),
+                disabledBackgroundColor: kCoralRed.withValues(alpha: 0.6),
                 elevation: 0,
                 shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(

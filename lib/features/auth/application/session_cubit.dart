@@ -1,3 +1,4 @@
+// file: lib/features/auth/application/session_cubit.dart
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -35,23 +36,12 @@ class SessionCubit extends Cubit<SessionState> {
 
   /// AUTH-04: called once at app start to restore/refresh a persisted session.
   Future<void> bootstrap() async {
-    // If there is an in-memory session, try to refresh it to ensure validity.
+    // Let Supabase emit initialSession. Seed UI immediately without forcing refresh.
     final current = _supabase.auth.currentSession;
     if (current != null) {
-      try {
-        await _supabase.auth.refreshSession();
-        // onAuthStateChange will emit authenticated
-      } on AuthException {
-        // Refresh failed => expire softly and sign out
-        await _supabase.auth.signOut();
-        emit(SessionState.unauthenticated(expiredNotice: true));
-      } catch (_) {
-        // Any other error -> fall back to unauthenticated
-        emit(SessionState.unauthenticated());
-      }
+      emit(SessionState.authenticated(current));
     } else {
-      // Let onAuthStateChange(initialSession) resolve to unauthenticated
-      // No-op here.
+      emit(SessionState.unauthenticated());
     }
   }
 
