@@ -1,16 +1,13 @@
 stages:
   - build
 
+image: ghcr.io/cirruslabs/flutter:stable-android
+
 variables:
-  ANDROID_SDK_ROOT: "$CI_PROJECT_DIR/android-sdk"
-  ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
-  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+  ANDROID_HOME: "/opt/android-sdk"
+  ANDROID_SDK_ROOT: "/opt/android-sdk"
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
-  ANDROID_PLATFORM: "android-34"
-  ANDROID_BUILD_TOOLS: "34.0.0"
-
-image: ubuntu:22.04
 
 cache:
   key: "flutter-android-$CI_COMMIT_REF_SLUG"
@@ -23,41 +20,38 @@ cache:
 android_debug_apk:
   stage: build
   rules:
-    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_BRANCH           # run on any branch push
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
   before_script:
-    # Basics
-    - apt-get update -y
-    - apt-get install -y --no-install-recommends curl unzip git xz-utils zip ca-certificates openjdk-17-jdk libglu1-mesa
-    - java -version
-
-    # ANDROID SDK (commandline tools)
-    - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-    - curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
-    - unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-    # Move the inner 'cmdline-tools' dir to '.../cmdline-tools/latest'
-    - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-    - rm -f /tmp/cmdtools.zip
-    # Correct PATH: now sdkmanager is at .../latest/bin
-    - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
-
-    # Accept licenses & install required packages
-    - yes | sdkmanager --licenses
-    - sdkmanager "platform-tools" "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
-
-    # FLUTTER (stable)
-    - git clone https://github.com/flutter/flutter.git -b stable "$CI_PROJECT_DIR/flutter"
-    - export PATH="$CI_PROJECT_DIR/flutter/bin:$PATH"
     - flutter --version
     - flutter config --no-analytics
-    - flutter precache --android
+    - flutter doctor -v
 
-    # Project deps
+    # Make sure Gradle/AGP can locate the SDK
+    - mkdir -p android
+    - printf "sdk.dir=%s\n" "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > android/local.properties
+    - cat android/local.properties
+
+    # Helpful Gradle defaults (safe if file already exists)
+    - |
+      echo "org.gradle.jvmargs=-Xmx4096m -Dkotlin.daemon.jvm.options=-Xmx2048m" >> android/gradle.properties
+      echo "android.useAndroidX=true" >> android/gradle.properties
+      echo "android.enableJetifier=true" >> android/gradle.properties
+
+    # Ensure Gradle wrapper is executable (sometimes loses +x)
+    - chmod +x android/gradlew || true
+
     - flutter pub get
 
   script:
-    # Build debug APK
-    - flutter build apk --debug --no-shrink
+    # Pass dart-defines if CI variables are present
+    - |
+      EXTRA_DEFINES=()
+      if [ -n "$SUPABASE_URL" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_URL=$SUPABASE_URL"); fi
+      if [ -n "$SUPABASE_ANON_KEY" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"); fi
+
+      # Build Debug APK
+      flutter build apk --debug --no-shrink "${EXTRA_DEFINES[@]}"
 
   artifacts:
     when: always
