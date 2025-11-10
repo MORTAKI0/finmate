@@ -1,7 +1,6 @@
 stages:
   - build
 
-# Plain Ubuntu; we'll install Android SDK + Flutter
 image: ubuntu:22.04
 
 variables:
@@ -22,75 +21,105 @@ cache:
 
 android_debug_apk:
   stage: build
-  # ✅ Run only on the dev branch (and dev MRs)
+  # ✅ Run only on the dev branch (or MRs targeting dev)
   rules:
     - if: '$CI_COMMIT_BRANCH == "dev"'
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"'
-  before_script:
-    - set -euxo pipefail
 
-    # ---- Basics & JDK (Java 17 for AGP 8+) ----
+  before_script:
+    - bash -lc '
+        set -Eeuo pipefail; set -x;
+        mkdir -p ci-debug;
+
+        on_error() {
+          local line="$1";
+          echo "❌ CI FAILED at line ${line}";
+          echo "Last command: ${BASH_COMMAND}";
+          # Snapshot environment & trees
+          env | sort > ci-debug/env.txt || true;
+          uname -a > ci-debug/uname.txt || true;
+          # Show Android SDK layout & installed packages
+          ls -R "$ANDROID_SDK_ROOT" > ci-debug/android-sdk-tree.txt 2>&1 || true;
+          command -v sdkmanager && sdkmanager --list > ci-debug/sdkmanager-list.txt 2>&1 || true;
+          # Flutter/Gradle diags
+          command -v flutter && flutter doctor -v > ci-debug/flutter-doctor-post.txt 2>&1 || true;
+          [ -d android ] && (cd android && ./gradlew -v > ../ci-debug/gradle-version.txt 2>&1 || true);
+          # Build outputs if any
+          ls -R build > ci-debug/build-tree.txt 2>&1 || true;
+          # Grab *.log files if exist
+          find . -maxdepth 4 -type f -name "*.log" -print -exec sh -c "echo ==== {} ====; sed -n \"1,200p\" \"{}\"" \; > ci-debug/log-snippets.txt 2>&1 || true;
+        }
+        trap '\''on_error $LINENO'\'' ERR
+      '
+
+    # ---- Basics & JDK ----
     - apt-get update -y
     - apt-get install -y --no-install-recommends curl unzip git xz-utils zip ca-certificates openjdk-17-jdk libglu1-mesa
-    - java -version
+    - java -version | tee ci-debug/java-version.txt
 
-    # ---- Android SDK: install cmdline-tools properly ----
+    # ---- Android SDK: cmdline-tools correctly placed ----
     - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
     - curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
     - unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
     - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
     - rm -f /tmp/cmdtools.zip
     - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
-    - which sdkmanager
-    - sdkmanager --version
+    - which sdkmanager | tee ci-debug/which-sdkmanager.txt
+    - sdkmanager --version | tee ci-debug/sdkmanager-version.txt
 
-    # Accept licenses & install the platform/build-tools you compile with
+    # Accept licenses & install platform/build-tools
     - yes | sdkmanager --licenses
     - sdkmanager "platform-tools" "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
+    - sdkmanager --list | tee ci-debug/sdkmanager-list.txt
 
     # ---- Flutter (stable) ----
     - git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$CI_PROJECT_DIR/flutter"
     - export PATH="$CI_PROJECT_DIR/flutter/bin:$PATH"
-    - flutter --version
+    - flutter --version | tee ci-debug/flutter-version.txt
     - flutter config --no-analytics
     - flutter precache --android
-    - flutter doctor -v
+    - flutter doctor -v | tee ci-debug/flutter-doctor-pre.txt
 
-    # ---- Make sure Gradle sees the SDK ----
+    # ---- Ensure Gradle sees the SDK ----
     - mkdir -p android
     - printf "sdk.dir=%s\n" "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > android/local.properties
-    - cat android/local.properties
+    - cat android/local.properties | tee ci-debug/local-properties.txt
 
     # Helpful Gradle defaults (append if not present)
     - |
       echo "org.gradle.jvmargs=-Xmx4096m -Dkotlin.daemon.jvm.options=-Xmx2048m" >> android/gradle.properties
       echo "android.useAndroidX=true" >> android/gradle.properties
+      echo "android.enableJetifier=true" >> android/gradle.properties
+    - cat android/gradle.properties | tee ci-debug/gradle-properties.txt
+
+    # Gradle wrapper sometimes loses +x bit in CI
     - chmod +x android/gradlew || true
+    - (cd android && ./gradlew -v) | tee ci-debug/gradle-version.txt
 
     # ---- Dependencies ----
     - flutter pub get
 
   script:
-    # Optional quality gates:
-    # - flutter analyze
-    # - flutter test --no-pub
+    - bash -lc '
+        set -Eeuo pipefail; set -x;
 
-    # Pass dart-defines from CI variables (set in Settings → CI/CD → Variables)
-    - |
-      set -euxo pipefail
-      EXTRA_DEFINES=()
-      if [ -n "${SUPABASE_URL:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_URL=$SUPABASE_URL"); fi
-      if [ -n "${SUPABASE_ANON_KEY:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"); fi
+        # Pass dart-defines from CI vars if present
+        EXTRA_DEFINES=()
+        [ -n "${SUPABASE_URL:-}" ] && EXTRA_DEFINES+=("--dart-define=SUPABASE_URL=$SUPABASE_URL")
+        [ -n "${SUPABASE_ANON_KEY:-}" ] && EXTRA_DEFINES+=("--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY")
 
-      # Verbose build to capture errors clearly
-      flutter build apk -v --debug --no-shrink "${EXTRA_DEFINES[@]}" || { echo "=== Build failed, listing outputs & gradle logs ==="; ls -R build || true; find . -name "*.log" -maxdepth 4 -print -exec sed -n '1,200p' {} \; || true; exit 1; }
+        # Build (verbose). If it fails, the ERR trap collects diagnostics.
+        flutter build apk -v --debug --no-shrink "${EXTRA_DEFINES[@]}"
 
-      # Show where Flutter put the APKs
-      ls -R build/app/outputs || true
+        # Snapshot outputs on success too
+        ls -R build > ci-debug/build-tree.txt 2>&1 || true
+        flutter doctor -v > ci-debug/flutter-doctor-post.txt 2>&1 || true
+      '
 
   artifacts:
-    when: on_success
+    when: always         # ✅ upload even on failure
     expire_in: 7 days
     paths:
       - build/app/outputs/flutter-apk/app-debug.apk
       - build/app/outputs/apk/debug/app-debug.apk
+      - ci-debug/
