@@ -9,6 +9,7 @@ import '../features/auth/presentation/pages/magic_link_page.dart';
 import '../features/auth/presentation/pages/settings_page.dart';
 import '../features/holdings/presentation/pages/holdings_list_page.dart';
 import '../features/holdings/presentation/pages/holding_edit_page.dart';
+import '../features/holdings/application/holdings_cubit.dart';
 import 'require_auth.dart';
 import '../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../features/dashboard/application/dashboard_cubit.dart';
@@ -34,7 +35,7 @@ class FinMateApp extends StatelessWidget {
           title: 'FinMate',
           debugShowCheckedModeBanner: false,
           themeMode: AppThemeController.instance.mode,
-          initialRoute: '/auth',
+          initialRoute: '/',
           routes: <String, WidgetBuilder>{
             '/': (_) => const HomePage(),
             '/auth': (_) => const AuthEmailPage(),
@@ -51,7 +52,16 @@ class FinMateApp extends StatelessWidget {
               );
             },
             '/holdings': (_) => const RequireAuth(child: HoldingsListPage()),
-            '/holdings/edit': (_) => const RequireAuth(child: HoldingEditPage()),
+            '/holdings/edit': (ctx) {
+              return BlocProvider<HoldingsCubit>(
+                create: (_) => HoldingsCubit(
+                  HoldingsRepositoryImpl(client: Supabase.instance.client),
+                  HoldingsLocalQueue(),
+                  ctx.read<SessionCubit>(),
+                ),
+                child: const RequireAuth(child: HoldingEditPage()),
+              );
+            },
           },
           builder: (context, child) {
             return BlocListener<SessionCubit, SessionState>(

@@ -1,9 +1,19 @@
 // file: lib/features/auth/presentation/pages/auth_email_page.dart
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../application/session_cubit.dart';
+
+// --- Palette ---
+const kCoralRed = Color(0xFFE63C3A);
+const kCoralLight = Color(0xFFFF6B6B);
+const kBeige = Color(0xFFEAE8E4);
+const kDarkBG = Color(0xFF141416);
+const kSurfaceColor = Color(0xFF1E1E22);
+const kWhite = Colors.white;
+const kMidGray = Color(0xFF91908D);
 
 class AuthEmailPage extends StatefulWidget {
   const AuthEmailPage({super.key});
@@ -169,198 +179,255 @@ class _AuthEmailPageState extends State<AuthEmailPage>
 
   @override
   Widget build(BuildContext context) {
-    const kCoralRed = Color(0xFFE63C3A);
-    const kBeige = Color(0xFFD6D4CE);
-    const kDarkBG = Color(0xFF1C1C1E);
-    const kMidGray = Color(0xFF91908D);
-    const kWhite = Colors.white;
-
+    // Custom Input Theme
     final base = Theme.of(context);
+    final inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: kWhite.withValues(alpha: 0.1)),
+    );
+    
     final fieldTheme = base.inputDecorationTheme.copyWith(
       filled: true,
-      fillColor: kWhite,
+      fillColor: kDarkBG,
       isDense: false,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: kMidGray.withValues(alpha: 0.3)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: kMidGray.withValues(alpha: 0.3)),
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      hintStyle: TextStyle(color: kMidGray.withValues(alpha: 0.5)),
+      border: inputBorder,
+      enabledBorder: inputBorder,
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: kCoralRed, width: 2),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         borderSide: const BorderSide(color: kCoralRed, width: 1.5),
       ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: kCoralRed, width: 2),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: kCoralRed.withValues(alpha: 0.5), width: 1),
       ),
     );
 
     return Scaffold(
       backgroundColor: kDarkBG,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Theme(
-              data: base.copyWith(inputDecorationTheme: fieldTheme),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Logo/Brand Area
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        color: kCoralRed,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                                  color: kCoralRed.withValues(alpha: 0.4),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.lock_outline_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Welcome Text
-                    const Text(
-                      'Bienvenue',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: kWhite,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Connectez-vous pour continuer',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: kMidGray,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-
-                    // Tab Switcher
-                    Container(
-                      decoration: BoxDecoration(
-                        color: kBeige,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: kMidGray.withValues(alpha: 0.2)),
-                      ),
-                      child: TabBar(
-                        controller: _tabController,
-                        indicator: BoxDecoration(
-                          borderRadius: BorderRadius.circular(10),
-                          color: kCoralRed,
-                        ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        dividerColor: Colors.transparent,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: kDarkBG,
-                        labelStyle: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 15,
-                        ),
-                        padding: const EdgeInsets.all(4),
-                        onTap: (index) => HapticFeedback.lightImpact(),
-                        tabs: const [
-                          Tab(text: 'Connexion'),
-                          Tab(text: 'Inscription'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Tab Content
-                    SizedBox(
-                      height: 520,
-                      child: TabBarView(
-                        controller: _tabController,
-                        physics: const NeverScrollableScrollPhysics(),
-                        children: [
-                          // Sign In Form
-                          _buildSignInForm(),
-                          
-                          // Sign Up Form
-                          _buildSignUpForm(),
-                        ],
-                      ),
-                    ),
-                  ],
+      body: Stack(
+        children: [
+          // 1. Ambient Background Glow
+          Positioned(
+            top: -100,
+            left: -50,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  color: kCoralRed.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
           ),
-        ),
+
+          // 2. Main Content
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                child: Theme(
+                  data: base.copyWith(inputDecorationTheme: fieldTheme),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Animated Logo
+                        Center(
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween(begin: 0.0, end: 1.0),
+                            duration: const Duration(milliseconds: 1000),
+                            curve: Curves.elasticOut,
+                            builder: (context, value, child) {
+                              return Transform.scale(scale: value, child: child);
+                            },
+                            child: Container(
+                              width: 80,
+                              height: 80,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [kCoralRed, kCoralLight],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: kCoralRed.withValues(alpha: 0.4),
+                                    blurRadius: 30,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.lock_person_rounded,
+                                color: kWhite,
+                                size: 36,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Header Text
+                        const Text(
+                          'Welcome Back',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: kWhite,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Manage your finance securely.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: kBeige.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+
+                        // Glassmorphic Surface
+                        Container(
+                          decoration: BoxDecoration(
+                            color: kSurfaceColor,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: kWhite.withValues(alpha: 0.08)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Tab Switcher
+                              Padding(
+                                padding: const EdgeInsets.all(6.0),
+                                child: Container(
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: kDarkBG,
+                                    borderRadius: BorderRadius.circular(18),
+                                  ),
+                                  child: TabBar(
+                                    controller: _tabController,
+                                    indicator: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(14),
+                                      color: kSurfaceColor,
+                                      border: Border.all(color: kWhite.withValues(alpha: 0.1)),
+                                    ),
+                                    indicatorSize: TabBarIndicatorSize.tab,
+                                    indicatorPadding: const EdgeInsets.all(2),
+                                    dividerColor: Colors.transparent,
+                                    labelColor: kWhite,
+                                    unselectedLabelColor: kMidGray,
+                                    labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    onTap: (index) => HapticFeedback.lightImpact(),
+                                    tabs: const [
+                                      Tab(text: 'Sign In'),
+                                      Tab(text: 'Sign Up'),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              
+                              // Form Content
+                              Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: AnimatedSize(
+                                  duration: const Duration(milliseconds: 300),
+                                  curve: Curves.easeOut,
+                                  alignment: Alignment.topCenter,
+                                  child: SizedBox(
+                                    // Use a constrained height for the TabBarView to function
+                                    // inside a scroll view.
+                                    height: 460, 
+                                    child: TabBarView(
+                                      controller: _tabController,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      children: [
+                                        _buildSignInForm(),
+                                        _buildSignUpForm(),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSignInForm() {
-    const kCoralRed = Color(0xFFE63C3A);
-    const kMidGray = Color(0xFF91908D);
-
     return Form(
       key: _loginKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Email Field
+          const SizedBox(height: 10),
+          // Email
           TextFormField(
             controller: _loginEmailCtrl,
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.email],
             validator: _validateEmail,
             enabled: !_loginBusy,
+            textInputAction: TextInputAction.next,
+            style: const TextStyle(color: kWhite),
             decoration: const InputDecoration(
               labelText: 'Email',
-              hintText: 'votre@email.com',
-              prefixIcon: Icon(Icons.email_outlined),
+              prefixIcon: Icon(Icons.email_rounded, color: kMidGray),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Password Field
+          // Password
           TextFormField(
             controller: _loginPassCtrl,
             obscureText: _hideLoginPass,
             validator: _validatePassword,
             enabled: !_loginBusy,
+            textInputAction: TextInputAction.done,
+            style: const TextStyle(color: kWhite),
+            onFieldSubmitted: (_) => _login(),
             decoration: InputDecoration(
-              labelText: 'Mot de passe',
-              hintText: '••••••••',
-              prefixIcon: const Icon(Icons.lock_outline),
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_rounded, color: kMidGray),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _hideLoginPass
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                  _hideLoginPass ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                  color: kMidGray,
+                  size: 20,
                 ),
                 onPressed: () => setState(() => _hideLoginPass = !_hideLoginPass),
               ),
             ),
           ),
-          const SizedBox(height: 12),
-
+          
           // Forgot Password
           Align(
             alignment: Alignment.centerRight,
@@ -370,142 +437,81 @@ class _AuthEmailPageState extends State<AuthEmailPage>
                 Navigator.of(context).pushNamed('/auth/magic-link');
               },
               child: Text(
-                'Mot de passe oublié?',
+                'Forgot Password?',
                 style: TextStyle(
-                  color: kCoralRed,
-                  fontWeight: FontWeight.w600,
+                  color: kBeige.withValues(alpha: 0.7),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const Spacer(),
 
           // Sign In Button
-          SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _loginBusy
-                  ? null
-                  : () {
-                      HapticFeedback.mediumImpact();
-                      _login();
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kCoralRed,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: kCoralRed.withValues(alpha: 0.6),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _loginBusy
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Se connecter',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-            ),
+          _AuthButton(
+            label: 'Sign In',
+            isBusy: _loginBusy,
+            onTap: _login,
           ),
-          const SizedBox(height: 24),
-
-          // Switch to Sign Up
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Pas encore de compte? ',
-                style: TextStyle(color: kMidGray),
-              ),
-              InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  _tabController.animateTo(1);
-                },
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  child: Text(
-                    'Inscrivez-vous',
-                    style: TextStyle(
-                      color: kCoralRed,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 20),
         ],
       ),
     );
   }
 
   Widget _buildSignUpForm() {
-    const kCoralRed = Color(0xFFE63C3A);
-    const kMidGray = Color(0xFF91908D);
-
     return Form(
       key: _signKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Name Field
+          const SizedBox(height: 10),
+          // Name
           TextFormField(
             controller: _nameCtrl,
             enabled: !_signBusy,
+            textInputAction: TextInputAction.next,
+            style: const TextStyle(color: kWhite),
             decoration: const InputDecoration(
-              labelText: 'Nom',
-              hintText: 'Votre nom',
-              prefixIcon: Icon(Icons.person_outline),
+              labelText: 'Full Name',
+              prefixIcon: Icon(Icons.person_rounded, color: kMidGray),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Email Field
+          // Email
           TextFormField(
             controller: _signEmailCtrl,
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.email],
             validator: _validateEmail,
             enabled: !_signBusy,
+            textInputAction: TextInputAction.next,
+            style: const TextStyle(color: kWhite),
             decoration: const InputDecoration(
               labelText: 'Email',
-              hintText: 'votre@email.com',
-              prefixIcon: Icon(Icons.email_outlined),
+              prefixIcon: Icon(Icons.email_rounded, color: kMidGray),
             ),
           ),
           const SizedBox(height: 16),
 
-          // Password Field
+          // Password
           TextFormField(
             controller: _signPassCtrl,
             obscureText: _hideSignPass,
             validator: _validatePassword,
             enabled: !_signBusy,
+            textInputAction: TextInputAction.next,
+            style: const TextStyle(color: kWhite),
             decoration: InputDecoration(
-              labelText: 'Mot de passe',
-              hintText: '••••••••',
-              prefixIcon: const Icon(Icons.lock_outline),
+              labelText: 'Password',
+              prefixIcon: const Icon(Icons.lock_rounded, color: kMidGray),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _hideSignPass
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                  _hideSignPass ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                  color: kMidGray,
+                  size: 20,
                 ),
                 onPressed: () => setState(() => _hideSignPass = !_hideSignPass),
               ),
@@ -513,110 +519,115 @@ class _AuthEmailPageState extends State<AuthEmailPage>
           ),
           const SizedBox(height: 16),
 
-          // Confirm Password Field
+          // Confirm Password
           TextFormField(
             controller: _signPass2Ctrl,
             obscureText: _hideSignPass2,
             validator: _validatePassword,
             enabled: !_signBusy,
+            textInputAction: TextInputAction.done,
+            style: const TextStyle(color: kWhite),
+            onFieldSubmitted: (_) => _signup(),
             decoration: InputDecoration(
-              labelText: 'Confirmer le mot de passe',
-              hintText: '••••••••',
-              prefixIcon: const Icon(Icons.lock_outline),
+              labelText: 'Confirm Password',
+              // FIXED: Replaced 'lock_check_rounded' with 'lock_rounded'
+              prefixIcon: const Icon(Icons.lock_rounded, color: kMidGray),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _hideSignPass2
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
+                  _hideSignPass2 ? Icons.visibility_rounded : Icons.visibility_off_rounded,
+                  color: kMidGray,
+                  size: 20,
                 ),
                 onPressed: () => setState(() => _hideSignPass2 = !_hideSignPass2),
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          
+          const Spacer(),
 
           // Sign Up Button
-          SizedBox(
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _signBusy
-                  ? null
-                  : () {
-                      HapticFeedback.mediumImpact();
-                      _signup();
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kCoralRed,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: kCoralRed.withValues(alpha: 0.6),
-                elevation: 0,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+          _AuthButton(
+            label: 'Create Account',
+            isBusy: _signBusy,
+            onTap: _signup,
+          ),
+          
+          const SizedBox(height: 12),
+          Center(
+            child: Text(
+              'You will receive a confirmation email.',
+              style: TextStyle(
+                color: kMidGray.withValues(alpha: 0.6),
+                fontSize: 12,
               ),
-              child: _signBusy
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Créer un compte',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
 
-          // Info Text
-          Text(
-            'Vous recevrez un email de confirmation',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: kMidGray,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 16),
+// Reusable animated button for consistency
+class _AuthButton extends StatelessWidget {
+  final String label;
+  final bool isBusy;
+  final VoidCallback onTap;
 
-          // Switch to Sign In
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Déjà inscrit? ',
-                style: TextStyle(color: kMidGray),
-              ),
-              InkWell(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  _tabController.animateTo(0);
-                },
-                borderRadius: BorderRadius.circular(4),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 2,
-                  ),
-                  child: Text(
-                    'Connectez-vous',
-                    style: TextStyle(
-                      color: kCoralRed,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+  const _AuthButton({
+    required this.label,
+    required this.isBusy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: kCoralRed.withValues(alpha: 0.25),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
+      ),
+      child: ElevatedButton(
+        onPressed: isBusy
+            ? null
+            : () {
+                HapticFeedback.mediumImpact();
+                onTap();
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: kCoralRed,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: kSurfaceColor,
+          elevation: 0,
+          fixedSize: const Size(double.infinity, 56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: isBusy
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: kWhite,
+                ),
+              )
+            : Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
       ),
     );
   }

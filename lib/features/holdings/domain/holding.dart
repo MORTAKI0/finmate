@@ -1,3 +1,4 @@
+// file lib/features/holdings/domain/holding.dart
 import 'package:equatable/equatable.dart';
 
 class Holding extends Equatable {

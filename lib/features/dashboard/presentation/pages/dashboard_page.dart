@@ -1,178 +1,573 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../dashboard/application/dashboard_cubit.dart';
 import '../../../dashboard/application/dashboard_state.dart';
 
+// --- Palette ---
 const kCoralRed = Color(0xFFE63C3A);
-const kBeige = Color(0xFFD6D4CE);
-const kDarkBG = Color(0xFF1C1C1E);
-const kMidGray = Color(0xFF91908D);
+const kCoralLight = Color(0xFFFF6B6B);
+const kBeige = Color(0xFFEAE8E4);
+const kDarkBG = Color(0xFF141416);
+const kSurfaceColor = Color(0xFF1E1E22);
 const kWhite = Colors.white;
+const kMidGray = Color(0xFF91908D);
+const kAccentGreen = Color(0xFF00C853);
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
+  // Helper to extract a display name from email if needed
+  String _getDisplayName(String? email) {
+    if (email == null || email.isEmpty) return 'Friend';
+    final namePart = email.split('@').first;
+    // Capitalize first letter
+    if (namePart.isNotEmpty) {
+      return namePart[0].toUpperCase() + namePart.substring(1);
+    }
+    return namePart;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F6F3),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Dashboard'),
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'signout') {
-                context.read<DashboardCubit>().sessionCubit.signOut();
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem<String>(value: 'signout', child: Text('Sign out')),
-            ],
-          ),
-        ],
-      ),
+      backgroundColor: kDarkBG,
+      // Modern Custom Bottom Navigation
+      bottomNavigationBar: const _DashboardBottomNav(),
       body: BlocBuilder<DashboardCubit, DashboardState>(
         builder: (context, state) {
-          final isWide = MediaQuery.sizeOf(context).width > 720;
-          final crossAxisCount = isWide ? 3 : 1;
-          final themeCard = BoxDecoration(
-            color: kWhite,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 18, offset: const Offset(0, 8)),
-            ],
-            border: Border.all(color: kDarkBG.withValues(alpha: 0.06)),
-          );
+          final displayName = _getDisplayName(state.userEmail);
+          
+          return SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), // Bottom padding for Nav Bar
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Header (Profile & Notifications)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: kSurfaceColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: kWhite.withValues(alpha: 0.1)),
+                              image: const DecorationImage(
+                                image: NetworkImage('https://i.pravatar.cc/150?img=11'), // Placeholder avatar
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Good morning,',
+                                style: TextStyle(
+                                  color: kBeige.withValues(alpha: 0.6),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                displayName,
+                                style: const TextStyle(
+                                  color: kWhite,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      // Actions (Sign Out / Notifications)
+                      Row(
+                        children: [
+                          _HeaderIconButton(
+                            icon: Icons.notifications_none_rounded,
+                            onTap: () {}, // Notification logic here
+                          ),
+                          const SizedBox(width: 10),
+                          _HeaderIconButton(
+                            icon: Icons.logout_rounded,
+                            color: kCoralRed,
+                            onTap: () {
+                              context.read<DashboardCubit>().sessionCubit.signOut();
+                            },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
 
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (state.error != null)
+                  const SizedBox(height: 24),
+
+                  // 2. Error Banner (If any)
+                  if (state.error != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      margin: const EdgeInsets.only(bottom: 20),
+                      decoration: BoxDecoration(
+                        color: kCoralRed.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: kCoralRed.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: kCoralRed, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              state.error!,
+                              style: const TextStyle(color: kCoralRed, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // 3. Main Balance Card
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3CD),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFAEBCC)),
+                      gradient: const LinearGradient(
+                        colors: [kCoralRed, Color(0xFFFF6B6B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: [
+                        BoxShadow(
+                          color: kCoralRed.withValues(alpha: 0.4),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      state.error!,
-                      style: const TextStyle(color: Color(0xFF8A6D3B)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: kWhite.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Text(
+                                'Total Balance',
+                                style: TextStyle(
+                                  color: kWhite,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.visibility_off_outlined, color: kWhite, size: 20),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          '\$12,450.00', // Placeholder or sum from holdings
+                          style: TextStyle(
+                            color: kWhite,
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.arrow_upward_rounded, color: kCoralRed, size: 14),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              '+2.45% today',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
-                Text(
-                  state.userEmail != null ? 'Hi, ${state.userEmail}' : 'Hi there',
-                  style: const TextStyle(color: kDarkBG, fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 12),
-                Expanded(
-                  child: GridView.count(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+
+                  const SizedBox(height: 24),
+
+                  // 4. Quick Actions
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Holdings card
-                      Container(
-                        decoration: themeCard,
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Holdings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kDarkBG)),
-                            const SizedBox(height: 6),
-                            if (state.holdingsCount == 0)
-                              const Text('No holdings yet\nAdd your first asset to get started', style: TextStyle(color: kMidGray))
-                            else
-                              Text(
-                                'You have ${state.holdingsCount} holdings',
-                                style: const TextStyle(color: kMidGray),
-                              ),
-                            const SizedBox(height: 6),
-                            Text('Last updated: ${state.lastUpdated != null ? state.lastUpdated!.toLocal().toString() : "—"}',
-                                style: const TextStyle(color: kMidGray, fontSize: 12)),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: kCoralRed,
-                                      foregroundColor: kWhite,
-                                      minimumSize: const Size.fromHeight(44),
-                                    ),
-                                    onPressed: () => Navigator.of(context).pushNamed('/holdings'),
-                                    child: const Text('View holdings'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () => Navigator.of(context).pushNamed('/holdings/edit'),
-                                    child: const Text('Add holding'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                      _QuickActionButton(
+                        icon: Icons.add_rounded,
+                        label: 'Top Up',
+                        onTap: () {},
+                      ),
+                      _QuickActionButton(
+                        icon: Icons.swap_horiz_rounded,
+                        label: 'Exchange',
+                        onTap: () {},
+                      ),
+                      _QuickActionButton(
+                        icon: Icons.send_rounded,
+                        label: 'Transfer',
+                        onTap: () {},
+                      ),
+                      _QuickActionButton(
+                        icon: Icons.grid_view_rounded,
+                        label: 'More',
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // 5. Holdings Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Your Holdings',
+                        style: TextStyle(
+                          color: kWhite,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-
-                      // Offline queue card
-                      Container(
-                        decoration: themeCard,
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Offline queue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kDarkBG)),
-                            const SizedBox(height: 6),
-                            Text('Pending actions: ${state.pendingOpsCount}', style: const TextStyle(color: kMidGray)),
-                            const Spacer(),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: () => context.read<DashboardCubit>().retryQueue(),
-                                child: const Text('Retry queued ops'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Profile / Settings card
-                      Container(
-                        decoration: themeCard,
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Profile & Settings', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: kDarkBG)),
-                            const SizedBox(height: 6),
-                            const Text('Manage profile and app settings', style: TextStyle(color: kMidGray)),
-                            const Spacer(),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.of(context).pushNamed('/settings'),
-                                child: const Text('Open Settings'),
-                              ),
-                            ),
-                          ],
+                      GestureDetector(
+                        onTap: () => Navigator.of(context).pushNamed('/holdings'),
+                        child: Text(
+                          'See All',
+                          style: TextStyle(
+                            color: kCoralRed,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  
+                  // Holdings Summary Card
+                  _DashboardTile(
+                    title: 'Portfolio Assets',
+                    subtitle: state.holdingsCount == 0 
+                        ? 'No assets added yet' 
+                        : '${state.holdingsCount} active holdings',
+                    icon: Icons.pie_chart_outline_rounded,
+                    accentColor: const Color(0xFF6366F1),
+                    trailing: Text(
+                      state.lastUpdated != null 
+                          ? 'Synced ${state.lastUpdated!.hour}:${state.lastUpdated!.minute}' 
+                          : 'Not synced',
+                      style: TextStyle(color: kBeige.withValues(alpha: 0.4), fontSize: 11),
+                    ),
+                    onTap: () => Navigator.of(context).pushNamed('/holdings'),
+                  ),
+                  
+                  // Add Holding Button (Small)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(context).pushNamed('/holdings/edit'),
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                      label: const Text('Add new asset'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: kBeige,
+                        side: BorderSide(color: kWhite.withValues(alpha: 0.1)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // 6. Offline Queue Section (Visible only if needed or as status)
+                  if (state.pendingOpsCount > 0) ...[
+                    const Text(
+                      'Sync Status',
+                      style: TextStyle(
+                        color: kWhite,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _DashboardTile(
+                      title: 'Offline Queue',
+                      subtitle: '${state.pendingOpsCount} actions pending',
+                      icon: Icons.cloud_off_rounded,
+                      accentColor: const Color(0xFFF59E0B),
+                      onTap: () => context.read<DashboardCubit>().retryQueue(),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: kWhite.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: kWhite.withValues(alpha: 0.1)),
+                        ),
+                        child: const Text('Tap to Retry', style: TextStyle(color: kWhite, fontSize: 10)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // 7. Settings & Security
+                  _DashboardTile(
+                    title: 'Settings & Security',
+                    subtitle: 'Manage profile, security and preferences',
+                    icon: Icons.settings_outlined,
+                    accentColor: kMidGray,
+                    onTap: () => Navigator.of(context).pushNamed('/settings'),
+                  ),
+
+                ],
+              ),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+// --- SUB-WIDGETS ---
+
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color color;
+
+  const _HeaderIconButton({required this.icon, required this.onTap, this.color = kBeige});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: kSurfaceColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: kWhite.withValues(alpha: 0.05)),
+        ),
+        child: Icon(icon, color: color, size: 22),
+      ),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: () {
+            // HapticFeedback.lightImpact(); // Use if services imported
+            onTap();
+          },
+          child: Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: kSurfaceColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: kWhite.withValues(alpha: 0.08)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: kBeige, size: 26),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: kBeige.withValues(alpha: 0.7),
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color accentColor;
+  final VoidCallback onTap;
+  final Widget? trailing;
+
+  const _DashboardTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.accentColor,
+    required this.onTap,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: kSurfaceColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: kWhite.withValues(alpha: 0.03)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: accentColor, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: kWhite,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: kBeige.withValues(alpha: 0.5),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 8),
+              trailing!,
+            ] else 
+              Icon(Icons.chevron_right_rounded, color: kBeige.withValues(alpha: 0.3), size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardBottomNav extends StatelessWidget {
+  const _DashboardBottomNav();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          height: 85,
+          decoration: BoxDecoration(
+            color: kDarkBG.withValues(alpha: 0.8),
+            border: Border(top: BorderSide(color: kWhite.withValues(alpha: 0.05))),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: const [
+              _NavBarItem(icon: Icons.home_filled, label: 'Home', isSelected: true),
+              _NavBarItem(icon: Icons.pie_chart_rounded, label: 'Analytics', isSelected: false),
+              // Floating Action Button Placeholder (Center)
+              SizedBox(width: 40), 
+              _NavBarItem(icon: Icons.account_balance_wallet_rounded, label: 'Wallet', isSelected: false),
+              _NavBarItem(icon: Icons.person_rounded, label: 'Profile', isSelected: false),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Just for visual representation in this snippet
+class _NavBarItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+
+  const _NavBarItem({required this.icon, required this.label, required this.isSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          icon,
+          color: isSelected ? kCoralRed : kMidGray,
+          size: 26,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? kCoralRed : kMidGray,
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+          ),
+        ),
+      ],
     );
   }
 }
