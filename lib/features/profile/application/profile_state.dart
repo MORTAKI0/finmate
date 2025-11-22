@@ -24,11 +24,12 @@ class ProfileState extends Equatable {
     Profile? profile,
     String? error,
     ProfileErrorKind? errorKind,
+    bool clearError = false,
   }) {
     return ProfileState(
       status: status ?? this.status,
       profile: profile ?? this.profile,
-      error: error,
+      error: clearError ? null : (error ?? this.error),
       errorKind: errorKind ?? this.errorKind,
     );
   }

@@ -17,6 +17,16 @@ const kAccentGreen = Color(0xFF00C853);
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
+  Future<void> _openHoldings(BuildContext context) async {
+    await Navigator.of(context).pushNamed('/holdings');
+    await context.read<DashboardCubit>().load();
+  }
+
+  Future<void> _openAddHolding(BuildContext context) async {
+    await Navigator.of(context).pushNamed('/holdings/edit');
+    await context.read<DashboardCubit>().load();
+  }
+
   // Helper to extract a display name from email if needed
   String _getDisplayName(String? email) {
     if (email == null || email.isEmpty) return 'Friend';
@@ -260,7 +270,7 @@ class DashboardPage extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Navigator.of(context).pushNamed('/holdings'),
+                        onTap: () => _openHoldings(context),
                         child: Text(
                           'See All',
                           style: TextStyle(
@@ -288,14 +298,14 @@ class DashboardPage extends StatelessWidget {
                           : 'Not synced',
                       style: TextStyle(color: kBeige.withValues(alpha: 0.4), fontSize: 11),
                     ),
-                    onTap: () => Navigator.of(context).pushNamed('/holdings'),
+                    onTap: () => _openHoldings(context),
                   ),
                   
                   // Add Holding Button (Small)
                   Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: OutlinedButton.icon(
-                      onPressed: () => Navigator.of(context).pushNamed('/holdings/edit'),
+                      onPressed: () => _openAddHolding(context),
                       icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
                       label: const Text('Add new asset'),
                       style: OutlinedButton.styleFrom(

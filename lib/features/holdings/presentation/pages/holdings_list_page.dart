@@ -34,6 +34,12 @@ class _HoldingsListView extends StatefulWidget {
 class _HoldingsListViewState extends State<_HoldingsListView> {
   String _query = '';
 
+  Future<void> _openEdit(BuildContext context, {Object? args}) async {
+    await Navigator.of(context).pushNamed('/holdings/edit', arguments: args);
+    if (!mounted) return;
+    await context.read<HoldingsCubit>().load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,7 +54,7 @@ class _HoldingsListViewState extends State<_HoldingsListView> {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.of(context).pushNamed('/holdings/edit'),
+        onPressed: () => _openEdit(context),
         child: const Icon(Icons.add),
       ),
       body: BlocConsumer<HoldingsCubit, HoldingsState>(
@@ -86,7 +92,7 @@ class _HoldingsListViewState extends State<_HoldingsListView> {
                       final h = items[index];
                       return HoldingCard(
                         holding: h,
-                        onTap: () => Navigator.of(context).pushNamed('/holdings/edit', arguments: h),
+                        onTap: () => _openEdit(context, args: h),
                       );
                     },
                   ),

@@ -40,7 +40,7 @@ class FinMateApp extends StatelessWidget {
             '/': (_) => const HomePage(),
             '/auth': (_) => const AuthEmailPage(),
             '/auth/magic-link': (_) => const MagicLinkPage(),
-            '/settings': (_) => const SettingsPage(),
+            '/settings': (_) => const RequireAuth(child: SettingsPage()),
             '/dashboard': (ctx) {
               return BlocProvider<DashboardCubit>(
                 create: (_) => DashboardCubit(
