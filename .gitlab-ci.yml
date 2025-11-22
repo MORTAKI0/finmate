@@ -1,16 +1,19 @@
 stages:
   - build
 
-# Vanilla Ubuntu; we install everything ourselves
 image: ubuntu:22.04
 
 variables:
+  DEBIAN_FRONTEND: noninteractive
   ANDROID_SDK_ROOT: "$CI_PROJECT_DIR/android-sdk"
   ANDROID_HOME: "$CI_PROJECT_DIR/android-sdk"
   GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
   PUB_CACHE: "$CI_PROJECT_DIR/.pub-cache"
+  # Baselines; we’ll also detect from Gradle and install those too
   ANDROID_PLATFORM: "android-34"
   ANDROID_BUILD_TOOLS: "34.0.0"
+  GRADLE_OPTS: "-Dorg.gradle.warning.mode=all -Dkotlin.daemon.jvm.options=-Xmx2048m"
+  _GRADLE_JVMARGS: "-Xmx4096m -Dkotlin.daemon.jvm.options=-Xmx2048m"
 
 cache:
   key: "flutter-android-$CI_COMMIT_REF_SLUG"
@@ -23,71 +26,140 @@ cache:
 android_debug_apk:
   stage: build
   rules:
-    - if: $CI_COMMIT_BRANCH           # run on any branch push
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: '$CI_COMMIT_BRANCH == "dev"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "dev"'
+
   before_script:
     - set -euxo pipefail
+    - mkdir -p ci-debug
 
-    # ---- Basics & JDK (Java 17 is OK for AGP 8+. If your project uses older AGP, switch to openjdk-11-jdk) ----
+    # -------- Read AGP version and choose the right JDK --------
+    - |
+      AGP_LINE="$(grep -R --line-number -E "com.android.tools.build:gradle:[0-9.]+" android/build.gradle || true)"
+      echo "$AGP_LINE" | tee ci-debug/agp-line.txt
+      if [ -n "$AGP_LINE" ]; then
+        AGP_VER="$(echo "$AGP_LINE" | sed -E 's/.*gradle:([0-9.]+).*/\1/' | tail -n1)"
+        AGP_MAJOR="$(echo "$AGP_VER" | cut -d. -f1)"
+      else
+        AGP_VER=""
+        AGP_MAJOR="8"   # assume modern
+      fi
+      echo "Detected AGP: $AGP_VER (major=$AGP_MAJOR)" | tee ci-debug/agp-version.txt
+      if [ "$AGP_MAJOR" -lt 8 ]; then
+        JDK_PKG="openjdk-11-jdk"
+        JAVA_HOME="/usr/lib/jvm/java-11-openjdk-amd64"
+      else
+        JDK_PKG="openjdk-17-jdk"
+        JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+      fi
+      echo "Using JDK package: $JDK_PKG" | tee -a ci-debug/agp-version.txt
+
+    # -------- Basics & JDK --------
     - apt-get update -y
-    - apt-get install -y --no-install-recommends curl unzip git xz-utils zip ca-certificates openjdk-17-jdk libglu1-mesa
-    - java -version
+    - apt-get install -y --no-install-recommends curl unzip git xz-utils zip ca-certificates libglu1-mesa util-linux $JDK_PKG
+    - export JAVA_HOME="$JAVA_HOME"
+    - export PATH="$JAVA_HOME/bin:$PATH"
+    - java -version | tee ci-debug/java-version.txt
 
-    # ---- Android SDK: install cmdline-tools properly (so sdkmanager exists at .../latest/bin) ----
+    # -------- Android SDK (cmdline-tools to .../latest) --------
     - mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
     - curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o /tmp/cmdtools.zip
     - unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
     - mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
     - rm -f /tmp/cmdtools.zip
     - export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
-
-    # Sanity checks
-    - which sdkmanager
-    - sdkmanager --version
-
-    # Accept licenses & install required packages (match your compileSdk/buildTools)
+    - which sdkmanager | tee ci-debug/which-sdkmanager.txt
+    - sdkmanager --version | tee ci-debug/sdkmanager-version.txt
     - yes | sdkmanager --licenses
     - sdkmanager "platform-tools" "platforms;${ANDROID_PLATFORM}" "build-tools;${ANDROID_BUILD_TOOLS}"
 
-    # ---- Flutter (stable) ----
+    # -------- Detect compileSdk/buildTools from your Gradle files --------
+    - |
+      set -e
+      if [ -f android/app/build.gradle ]; then
+        DETECTED_SDK="$(grep -R --line-number -E 'compileSdk(Version)?[[:space:]]+([0-9]+)' android/app/build.gradle || true)"
+        DETECTED_BT="$(grep -R --line-number -E 'buildToolsVersion[[:space:]]+"[^"]+"' android/app/build.gradle || true)"
+      else
+        DETECTED_SDK=""
+        DETECTED_BT=""
+      fi
+      echo "$DETECTED_SDK" | tee ci-debug/detected-compileSdk.txt
+      echo "$DETECTED_BT"  | tee ci-debug/detected-buildTools.txt
+      if [ -n "$DETECTED_SDK" ]; then
+        COMPILE_SDK="$(echo "$DETECTED_SDK" | sed -E 's/.*compileSdk(Version)?[[:space:]]+([0-9]+)/\2/' | tail -n1)"
+        echo "Installing platforms;android-$COMPILE_SDK"
+        sdkmanager "platforms;android-$COMPILE_SDK" || true
+      fi
+      if [ -n "$DETECTED_BT" ]; then
+        BUILD_TOOLS="$(echo "$DETECTED_BT" | sed -E 's/.*buildToolsVersion[[:space:]]+"([^"]+)".*/\1/' | tail -n1)"
+        echo "Installing build-tools;$BUILD_TOOLS"
+        sdkmanager "build-tools;$BUILD_TOOLS" || true
+      fi
+      sdkmanager --list | tee ci-debug/sdkmanager-list.txt
+
+    # -------- Flutter (stable) --------
     - git clone --depth 1 -b stable https://github.com/flutter/flutter.git "$CI_PROJECT_DIR/flutter"
     - export PATH="$CI_PROJECT_DIR/flutter/bin:$PATH"
-    - flutter --version
+    - flutter --version | tee ci-debug/flutter-version.txt
     - flutter config --no-analytics
     - flutter precache --android
-    - flutter doctor -v
+    - flutter doctor -v | tee ci-debug/flutter-doctor-pre.txt
 
-    # ---- Gradle/AGP can ignore env vars; ensure local.properties points to our SDK ----
+    # -------- Ensure Gradle sees SDK --------
     - mkdir -p android
     - printf "sdk.dir=%s\n" "${ANDROID_HOME:-$ANDROID_SDK_ROOT}" > android/local.properties
-    - cat android/local.properties
+    - cat android/local.properties | tee ci-debug/local-properties.txt
 
-    # Helpful Gradle defaults (append; safe if file already exists)
-    - |
-      echo "org.gradle.jvmargs=-Xmx4096m -Dkotlin.daemon.jvm.options=-Xmx2048m" >> android/gradle.properties
-      echo "android.useAndroidX=true" >> android/gradle.properties
-      echo "android.enableJetifier=true" >> android/gradle.properties
+    # Gradle defaults
+    - echo "org.gradle.jvmargs=${_GRADLE_JVMARGS}" >> android/gradle.properties
+    - echo "android.useAndroidX=true" >> android/gradle.properties
+    - echo "android.enableJetifier=true" >> android/gradle.properties
+    - cat android/gradle.properties | tee ci-debug/gradle-properties.txt
 
-    # Gradle wrapper sometimes loses +x bit in CI
+    # Wrapper may lose +x; print versions
     - chmod +x android/gradlew || true
+    - (cd android && ./gradlew -v) | tee ci-debug/gradle-version.txt || true
 
-    # ---- Dart/Flutter deps ----
+    # Keep copies of key files for debugging
+    - cp -f android/build.gradle ci-debug/android.build.gradle || true
+    - cp -f android/app/build.gradle ci-debug/android.app.build.gradle || true
+    - cp -f pubspec.yaml ci-debug/pubspec.yaml || true
+    - cp -f pubspec.lock ci-debug/pubspec.lock || true
+
+    # -------- Dependencies --------
     - flutter pub get
 
   script:
-    # Optional quality gates:
-    # - flutter analyze
-    # - flutter test --no-pub
+    - set -euxo pipefail
 
-    # Pass dart-defines from CI variables if present (e.g., set in Settings → CI/CD → Variables)
+    # Optional dart-defines from CI variables
     - |
-      set -euxo pipefail
       EXTRA_DEFINES=()
       if [ -n "${SUPABASE_URL:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_URL=$SUPABASE_URL"); fi
       if [ -n "${SUPABASE_ANON_KEY:-}" ]; then EXTRA_DEFINES+=("--dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY"); fi
 
-      # Build Debug APK
-      flutter build apk --debug --no-shrink "${EXTRA_DEFINES[@]}"
+      # Full console capture + live output of the last lines if it fails
+      flutter build apk -v --debug --no-shrink "${EXTRA_DEFINES[@]}" \
+        | tee ci-debug/flutter-build-console-live.txt
+      BUILD_STATUS=${PIPESTATUS[0]}
+
+      if [ "$BUILD_STATUS" -ne 0 ]; then
+        echo "=== BUILD FAILED (JDK=$JAVA_HOME). Showing tail of build log ==="
+        tail -n 200 ci-debug/flutter-build-console-live.txt || true
+        exit $BUILD_STATUS
+      fi
+
+      # Snapshot outputs on success
+      ls -R build > ci-debug/build-tree.txt 2>&1 || true
+      flutter doctor -v > ci-debug/flutter-doctor-post.txt 2>&1 || true
+
+  after_script:
+    - set +e
+    - env | sort > ci-debug/env.txt
+    - ls -R "$ANDROID_SDK_ROOT" > ci-debug/android-sdk-tree.txt 2>&1 || true
+    - find . -maxdepth 4 -name "*.log" -print -exec sh -c 'echo ==== {} ====; head -n 200 "{}"' \; > ci-debug/log-snippets.txt 2>&1 || true
+    - echo "=== Tail of flutter-build-console-live.txt (for convenience) ===" >> ci-debug/log-snippets.txt
+    - tail -n 300 ci-debug/flutter-build-console-live.txt >> ci-debug/log-snippets.txt 2>&1 || true
 
   artifacts:
     when: always
@@ -95,3 +167,4 @@ android_debug_apk:
     paths:
       - build/app/outputs/flutter-apk/app-debug.apk
       - build/app/outputs/apk/debug/app-debug.apk
+      - ci-debug/
