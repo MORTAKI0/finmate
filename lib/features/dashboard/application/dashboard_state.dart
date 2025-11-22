@@ -8,6 +8,7 @@ class DashboardState extends Equatable {
   final int pendingOpsCount;
   final DateTime? lastUpdated;
   final String? error;
+  final double? totalHoldingsCost;
 
   const DashboardState({
     required this.loading,
@@ -16,6 +17,7 @@ class DashboardState extends Equatable {
     this.pendingOpsCount = 0,
     this.lastUpdated,
     this.error,
+    this.totalHoldingsCost,
   });
 
   factory DashboardState.initial() => const DashboardState(loading: true);
@@ -27,6 +29,7 @@ class DashboardState extends Equatable {
     int? pendingOpsCount,
     DateTime? lastUpdated,
     String? error,
+    double? totalHoldingsCost,
   }) {
     return DashboardState(
       loading: loading ?? this.loading,
@@ -35,10 +38,18 @@ class DashboardState extends Equatable {
       pendingOpsCount: pendingOpsCount ?? this.pendingOpsCount,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       error: error,
+      totalHoldingsCost: totalHoldingsCost ?? this.totalHoldingsCost,
     );
   }
 
   @override
-  List<Object?> get props => [loading, userEmail, holdingsCount, pendingOpsCount, lastUpdated, error];
+  List<Object?> get props => [
+        loading,
+        userEmail,
+        holdingsCount,
+        pendingOpsCount,
+        lastUpdated,
+        error,
+        totalHoldingsCost,
+      ];
 }
-

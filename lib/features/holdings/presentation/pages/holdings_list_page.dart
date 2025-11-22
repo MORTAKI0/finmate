@@ -35,9 +35,11 @@ class _HoldingsListViewState extends State<_HoldingsListView> {
   String _query = '';
 
   Future<void> _openEdit(BuildContext context, {Object? args}) async {
-    await Navigator.of(context).pushNamed('/holdings/edit', arguments: args);
+    final changed = await Navigator.of(context).pushNamed('/holdings/edit', arguments: args);
     if (!mounted) return;
-    await context.read<HoldingsCubit>().load();
+    if (changed == true) {
+      await context.read<HoldingsCubit>().load();
+    }
   }
 
   @override

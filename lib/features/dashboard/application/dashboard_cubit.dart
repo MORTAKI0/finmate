@@ -26,8 +26,10 @@ class DashboardCubit extends Cubit<DashboardState> {
       final email = session.user.email;
       final items = await holdingsRepo.listMine();
       final count = items.length;
+      double total = 0;
       DateTime? last;
       for (final h in items) {
+        total += (h.costBasis as num).toDouble();
         if (last == null || h.updatedAt.isAfter(last)) last = h.updatedAt;
       }
       await queue.init();
@@ -40,6 +42,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         pendingOpsCount: pending,
         lastUpdated: last,
         error: null,
+        totalHoldingsCost: total,
       ));
     } catch (e) {
       emit(state.copyWith(loading: false, error: e.toString()));
@@ -62,4 +65,3 @@ class DashboardCubit extends Cubit<DashboardState> {
     }
   }
 }
-

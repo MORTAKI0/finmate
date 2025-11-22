@@ -18,13 +18,17 @@ class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
 
   Future<void> _openHoldings(BuildContext context) async {
-    await Navigator.of(context).pushNamed('/holdings');
-    await context.read<DashboardCubit>().load();
+    final changed = await Navigator.of(context).pushNamed('/holdings');
+    if (changed == true) {
+      await context.read<DashboardCubit>().load();
+    }
   }
 
   Future<void> _openAddHolding(BuildContext context) async {
-    await Navigator.of(context).pushNamed('/holdings/edit');
-    await context.read<DashboardCubit>().load();
+    final changed = await Navigator.of(context).pushNamed('/holdings/edit');
+    if (changed == true) {
+      await context.read<DashboardCubit>().load();
+    }
   }
 
   // Helper to extract a display name from email if needed
@@ -47,6 +51,9 @@ class DashboardPage extends StatelessWidget {
       body: BlocBuilder<DashboardCubit, DashboardState>(
         builder: (context, state) {
           final displayName = _getDisplayName(state.userEmail);
+          final totalText = state.totalHoldingsCost != null
+              ? '\$${state.totalHoldingsCost!.toStringAsFixed(2)}'
+              : '\$0.00';
           
           return SafeArea(
             bottom: false,
@@ -190,9 +197,9 @@ class DashboardPage extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        const Text(
-                          '\$12,450.00', // Placeholder or sum from holdings
-                          style: TextStyle(
+                        Text(
+                          totalText,
+                          style: const TextStyle(
                             color: kWhite,
                             fontSize: 32,
                             fontWeight: FontWeight.w800,

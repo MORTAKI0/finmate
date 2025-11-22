@@ -77,7 +77,7 @@ class _HoldingEditPageState extends State<HoldingEditPage> {
     } else {
       cubit.update(e.id, quantity: qty, costBasis: cost, note: note);
     }
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(true);
   }
 
   @override
