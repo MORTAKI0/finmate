@@ -27,9 +27,20 @@ class DashboardCubit extends Cubit<DashboardState> {
       final items = await holdingsRepo.listMine();
       final count = items.length;
       double total = 0;
+      double cryptoTotal = 0;
+      double cashTotal = 0;
+      int cryptoCount = 0;
+      int cashCount = 0;
       DateTime? last;
       for (final h in items) {
         total += (h.costBasis as num).toDouble();
+        if (h.type.toLowerCase() == 'crypto') {
+          cryptoTotal += (h.costBasis as num).toDouble();
+          cryptoCount += 1;
+        } else if (h.type.toLowerCase() == 'cash') {
+          cashTotal += (h.costBasis as num).toDouble();
+          cashCount += 1;
+        }
         if (last == null || h.updatedAt.isAfter(last)) last = h.updatedAt;
       }
       await queue.init();
@@ -43,6 +54,10 @@ class DashboardCubit extends Cubit<DashboardState> {
         lastUpdated: last,
         error: null,
         totalHoldingsCost: total,
+        cryptoHoldingsCost: cryptoTotal,
+        cashHoldingsCost: cashTotal,
+        cryptoHoldingsCount: cryptoCount,
+        cashHoldingsCount: cashCount,
       ));
     } catch (e) {
       emit(state.copyWith(loading: false, error: e.toString()));

@@ -54,6 +54,11 @@ class DashboardPage extends StatelessWidget {
           final totalText = state.totalHoldingsCost != null
               ? '\$${state.totalHoldingsCost!.toStringAsFixed(2)}'
               : '\$0.00';
+          final double total = (state.totalHoldingsCost ?? 0.0).clamp(0.0, double.infinity);
+          final double cryptoPct =
+              total > 0.0 ? (state.cryptoHoldingsCost / total) * 100.0 : 0.0;
+          final double cashPct =
+              total > 0.0 ? (state.cashHoldingsCost / total) * 100.0 : 0.0;
           
           return SafeArea(
             bottom: false,
@@ -306,6 +311,40 @@ class DashboardPage extends StatelessWidget {
                       style: TextStyle(color: kBeige.withValues(alpha: 0.4), fontSize: 11),
                     ),
                     onTap: () => _openHoldings(context),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: kSurfaceColor,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: kWhite.withValues(alpha: 0.04)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Allocation',
+                          style: TextStyle(
+                            color: kWhite,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        _AllocationChip(
+                          label: 'Crypto',
+                          count: state.cryptoHoldingsCount,
+                          percent: cryptoPct,
+                          color: const Color(0xFF6366F1),
+                        ),
+                        const SizedBox(width: 8),
+                        _AllocationChip(
+                          label: 'Cash',
+                          count: state.cashHoldingsCount,
+                          percent: cashPct,
+                          color: const Color(0xFF10B981),
+                        ),
+                      ],
+                    ),
                   ),
                   
                   // Add Holding Button (Small)
@@ -585,6 +624,39 @@ class _NavBarItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AllocationChip extends StatelessWidget {
+  final String label;
+  final int count;
+  final double percent;
+  final Color color;
+  const _AllocationChip({
+    required this.label,
+    required this.count,
+    required this.percent,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        '$label: $count · ${percent.isNaN ? 0 : percent.toStringAsFixed(0)}%',
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w700,
+          fontSize: 12,
+        ),
+      ),
     );
   }
 }

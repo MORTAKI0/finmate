@@ -9,6 +9,10 @@ class DashboardState extends Equatable {
   final DateTime? lastUpdated;
   final String? error;
   final double? totalHoldingsCost;
+  final double cryptoHoldingsCost;
+  final double cashHoldingsCost;
+  final int cryptoHoldingsCount;
+  final int cashHoldingsCount;
 
   const DashboardState({
     required this.loading,
@@ -18,6 +22,10 @@ class DashboardState extends Equatable {
     this.lastUpdated,
     this.error,
     this.totalHoldingsCost,
+    this.cryptoHoldingsCost = 0,
+    this.cashHoldingsCost = 0,
+    this.cryptoHoldingsCount = 0,
+    this.cashHoldingsCount = 0,
   });
 
   factory DashboardState.initial() => const DashboardState(loading: true);
@@ -30,6 +38,10 @@ class DashboardState extends Equatable {
     DateTime? lastUpdated,
     String? error,
     double? totalHoldingsCost,
+    double? cryptoHoldingsCost,
+    double? cashHoldingsCost,
+    int? cryptoHoldingsCount,
+    int? cashHoldingsCount,
   }) {
     return DashboardState(
       loading: loading ?? this.loading,
@@ -39,6 +51,10 @@ class DashboardState extends Equatable {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       error: error,
       totalHoldingsCost: totalHoldingsCost ?? this.totalHoldingsCost,
+      cryptoHoldingsCost: cryptoHoldingsCost ?? this.cryptoHoldingsCost,
+      cashHoldingsCost: cashHoldingsCost ?? this.cashHoldingsCost,
+      cryptoHoldingsCount: cryptoHoldingsCount ?? this.cryptoHoldingsCount,
+      cashHoldingsCount: cashHoldingsCount ?? this.cashHoldingsCount,
     );
   }
 
@@ -51,5 +67,9 @@ class DashboardState extends Equatable {
         lastUpdated,
         error,
         totalHoldingsCost,
+        cryptoHoldingsCost,
+        cashHoldingsCost,
+        cryptoHoldingsCount,
+        cashHoldingsCount,
       ];
 }
