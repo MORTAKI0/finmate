@@ -18,6 +18,9 @@ import '../features/holdings/data/holdings_repository_impl.dart';
 import '../core/offline/holdings_local_queue.dart';
 import '../features/auth/application/session_cubit.dart';
 import '../features/auth/application/session_state.dart';
+import '../features/transactions/application/transactions_cubit.dart';
+import '../features/transactions/data/transactions_repository_impl.dart';
+import '../features/history/presentation/pages/history_page.dart';
 import 'theme_controller.dart';
 
 class FinMateApp extends StatelessWidget {
@@ -35,6 +38,8 @@ class FinMateApp extends StatelessWidget {
           title: 'FinMate',
           debugShowCheckedModeBanner: false,
           themeMode: AppThemeController.instance.mode,
+          theme: ThemeData.light(),
+          darkTheme: ThemeData.dark(),
           initialRoute: '/',
           routes: <String, WidgetBuilder>{
             '/': (_) => const HomePage(),
@@ -53,13 +58,32 @@ class FinMateApp extends StatelessWidget {
             },
             '/holdings': (_) => const RequireAuth(child: HoldingsListPage()),
             '/holdings/edit': (ctx) {
-              return BlocProvider<HoldingsCubit>(
-                create: (_) => HoldingsCubit(
-                  HoldingsRepositoryImpl(client: Supabase.instance.client),
-                  HoldingsLocalQueue(),
+              return MultiBlocProvider(
+                providers: [
+                  BlocProvider<HoldingsCubit>(
+                    create: (_) => HoldingsCubit(
+                      HoldingsRepositoryImpl(client: Supabase.instance.client),
+                      HoldingsLocalQueue(),
+                      ctx.read<SessionCubit>(),
+                    ),
+                  ),
+                  BlocProvider<TransactionsCubit>(
+                    create: (_) => TransactionsCubit(
+                      TransactionsRepositoryImpl(client: Supabase.instance.client),
+                      ctx.read<SessionCubit>(),
+                    ),
+                  ),
+                ],
+                child: const RequireAuth(child: HoldingEditPage()),
+              );
+            },
+            '/history': (ctx) {
+              return BlocProvider<TransactionsCubit>(
+                create: (_) => TransactionsCubit(
+                  TransactionsRepositoryImpl(client: Supabase.instance.client),
                   ctx.read<SessionCubit>(),
                 ),
-                child: const RequireAuth(child: HoldingEditPage()),
+                child: const RequireAuth(child: HistoryPage()),
               );
             },
           },

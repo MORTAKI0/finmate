@@ -588,13 +588,14 @@ class _DashboardBottomNav extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: const [
-              _NavBarItem(icon: Icons.home_filled, label: 'Home', isSelected: true),
-              _NavBarItem(icon: Icons.pie_chart_rounded, label: 'Analytics', isSelected: false),
-              // Floating Action Button Placeholder (Center)
-              SizedBox(width: 40), 
-              _NavBarItem(icon: Icons.account_balance_wallet_rounded, label: 'Wallet', isSelected: false),
-              _NavBarItem(icon: Icons.person_rounded, label: 'Profile', isSelected: false),
+            children: [
+              _NavBarItem(icon: Icons.home_filled, label: 'Home', isSelected: true, onTap: () {}),
+              _NavBarItem(icon: Icons.history_rounded, label: 'History', isSelected: false, onTap: () {
+                Navigator.of(context).pushNamed('/history');
+              }),
+              const SizedBox(width: 40),
+              _NavBarItem(icon: Icons.account_balance_wallet_rounded, label: 'Wallet', isSelected: false, onTap: () {}),
+              _NavBarItem(icon: Icons.person_rounded, label: 'Profile', isSelected: false, onTap: () {}),
             ],
           ),
         ),
@@ -608,29 +609,33 @@ class _NavBarItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isSelected;
+  final VoidCallback onTap;
 
-  const _NavBarItem({required this.icon, required this.label, required this.isSelected});
+  const _NavBarItem({required this.icon, required this.label, required this.isSelected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          icon,
-          color: isSelected ? kCoralRed : kMidGray,
-          size: 26,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
             color: isSelected ? kCoralRed : kMidGray,
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            size: 26,
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? kCoralRed : kMidGray,
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
