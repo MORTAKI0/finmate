@@ -233,6 +233,13 @@ class DashboardPage extends StatelessWidget {
                             ),
                           ],
                         ),
+                        if (state.holdingsCount == 0) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Add your first asset to start tracking your net worth.',
+                            style: TextStyle(color: kWhite.withValues(alpha: 0.7), fontSize: 12),
+                          ),
+                        ],
                       ],
                     ),
                   ),

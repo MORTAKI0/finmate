@@ -37,7 +37,8 @@ class HoldingCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               alignment: Alignment.center,
-              child: Text(holding.symbol.substring(0, 1), style: const TextStyle(color: kDarkBG, fontWeight: FontWeight.bold)),
+              child:
+                  Text(holding.symbol.substring(0, 1), style: const TextStyle(color: kDarkBG, fontWeight: FontWeight.bold)),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -49,6 +50,20 @@ class HoldingCard extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text('Qty ${holding.quantity} · Cost ${holding.costBasis}',
                       style: const TextStyle(color: kMidGray, fontSize: 12)),
+                  if (holding.pending) ...[
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Text(
+                        'Pending sync',
+                        style: TextStyle(color: Colors.orange, fontSize: 11, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -56,17 +71,8 @@ class HoldingCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                const Text('—', style: TextStyle(color: kDarkBG, fontSize: 14, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 2),
-                if (holding.pending)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: kCoralRed.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Text('Pending…', style: TextStyle(color: kCoralRed, fontSize: 11, fontWeight: FontWeight.w600)),
-                  ),
+                Text(holding.symbol.toUpperCase(),
+                    style: const TextStyle(color: kDarkBG, fontSize: 14, fontWeight: FontWeight.w700)),
               ],
             )
           ],

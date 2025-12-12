@@ -62,7 +62,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     } catch (e) {
       emit(state.copyWith(loading: false, error: e.toString()));
       final s = e.toString().toLowerCase();
-      if (s.contains('jwt expired') || s.contains('unauthorized') || s.contains('invalid jwt')) {
+      if (s.contains('jwt expired') || s.contains('unauthorized') || s.contains('invalid jwt') || s.contains('forbidden')) {
         await sessionCubit.markExpiredAndSignOut();
       }
     }

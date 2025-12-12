@@ -70,7 +70,6 @@ class HoldingsCubit extends Cubit<HoldingsState> {
       final replaced = [saved, ...state.items.where((e) => e.id != id)];
       emit(state.copyWith(items: replaced));
     } on DuplicateHoldingException catch (d) {
-      // Remove optimistic; surface conflict
       emit(state.copyWith(
         items: state.items.where((e) => e.id != id).toList(),
         status: HoldingsStatus.error,
@@ -80,9 +79,12 @@ class HoldingsCubit extends Cubit<HoldingsState> {
         conflictSymbol: d.conflictSymbol,
       ));
     } catch (e) {
-      // Offline or other error → enqueue
+      final kind = _classify(e);
+      if (kind == HoldingsErrorKind.unauthorized || kind == HoldingsErrorKind.forbidden) {
+        await _session.markExpiredAndSignOut();
+        return;
+      }
       await _queue.enqueue(HoldingOp(op: 'create', id: id, payload: optimistic.toInsertMap(userId: optimistic.userId)));
-      // keep optimistic pending
     }
   }
 
@@ -105,7 +107,12 @@ class HoldingsCubit extends Cubit<HoldingsState> {
       final at = after.indexWhere((e) => e.id == id);
       if (at != -1) after[at] = saved;
       emit(state.copyWith(items: after));
-    } catch (_) {
+    } catch (e) {
+      final kind = _classify(e);
+      if (kind == HoldingsErrorKind.unauthorized || kind == HoldingsErrorKind.forbidden) {
+        await _session.markExpiredAndSignOut();
+        return;
+      }
       await _queue.enqueue(HoldingOp(op: 'update', id: id, payload: {
         if (quantity != null) 'quantity': quantity,
         if (costBasis != null) 'cost_basis': costBasis,
@@ -119,7 +126,12 @@ class HoldingsCubit extends Cubit<HoldingsState> {
     emit(state.copyWith(items: remaining));
     try {
       await _repo.delete(id);
-    } catch (_) {
+    } catch (e) {
+      final kind = _classify(e);
+      if (kind == HoldingsErrorKind.unauthorized || kind == HoldingsErrorKind.forbidden) {
+        await _session.markExpiredAndSignOut();
+        return;
+      }
       await _queue.enqueue(HoldingOp(op: 'delete', id: id));
     }
   }
